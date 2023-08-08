@@ -1,0 +1,152 @@
+#+Author: Prof. Miguel Angel Escalante Serrato
+#+title: Bases de Datos No Relacionales
+#+email: miguel.escalante@itam.mx
+#+bibliography: references.bib
+
+* Introducción
+Este es el repositorio con el contenido del curso Bases de Datos No Relacionales  de la Licenciatura en Ciencia de Datos del ITAM impartido por el Prof. Miguel Escalante.
+
+* El Curso
+
+** Objetivos:
+
+- El alumno se familiarizará con los conceptos de las bases de datos no relacionales
+- El alumno entenderá las diferencias y usos de las distintas familias de bases de datos
+- El alumno analizará los diferentes casos de uso y podrá elegir la mejor base de datos para cada caso.
+- El alumno podrá interactuar con los diferentes motores de base de datos.
+
+** ¿Meaning?
+
+Las BDs relacionales no son suficientes para contar toda la historia de un evento o de un objeto de negocio, de una orden, de un cliente, o de un envío. Frecuentemente la huella está dispersa en transacciones de una base de datos, visitas a unas páginas web, audios de atención a cliente, geolocalizaciones a lo largo de una ruta, texto libre en comentarios, grafos de redes sociales, y datos en memoria de los sistemas involucrados. Necesitamos saber interactuar con dichas bases de datos, y sobre todo, necesitamos poder consolidarlas en un repositorio central para lograr hacer analítica de todas las partes de la historia, sin dejar fuera ninguna fuente con la que corramos peligro de "quedar ciegos". En esta materia veremos como interactuar con dichas BDs no-relacionales (NoSQL = Not only SQL), y como construir dicho repositorio central.
+
+En una frase, esta materia trata de *consolidación de datos* para contar una historia completa.
+
+* Comunicación
+
+** Correo
+Escribe a ~miguel.escalante@itam.mx~ y por favor que el subject del correo diga ~[NOSQL]~.
+** Discord
+
+[[https://discord.gg/6WYXYhp7][Pícale aquí.]]
+
+* Temario
+
+- Velocidades en BDS
+- Base de datos con base en documentos
+- Bases de datos columnares
+- Bases de datos con base en Grafos
+- Data Lake
+- Spark (si hay tiempo)
+
+
+* Evaluación
+
+La calificación final está compuesta de la manera siguiente:
+
+| Entregable               | Porcentaje |
+|--------------------------+------------|
+| Primer Parcial           |        30% |
+| Examen Final             |        30% |
+| Proyecto Final (equipos) |        30% |
+| Presentación             |        10% |
+
+** Primer Parcial
+A la mitad del semestre haremos una evaluación con los temas vistos hasta el momento, todo lo visto o mencionado en clase es sujeto a ser evaluado en este examen. Tendrá un componente teórico y un componente práctico, más o menos al 50%.
+
+** Examen Final
+Al final del semestre tendremos una evaluación global de temas del curso, abarca todo el contenido que hayamos visto hasta ese momento. Habrá componentes teóricos y prácticos alrededor del 50% cada uno.
+
+** Proyecto Final
+Al final del semestre también espero que entreguen un proyecto englobando todos los conceptos que veamos. Será entregar un dashboard de analítica avanzada con interactividad. El equipo puede ser de a lo más 3 personas y será asignado aleatoreamente.
+
+** Presentación
+Una parte fundamental de la ciencia de datos es el presentar resultados a los interesados en el problema, por lo que para ejercitarlo se harán presentaciones de 10 minutos, (si 10% de su calificación en 10 minutos). Los 10 minutos son para establecer un hallazgo que hayan tenido en algún dataset que les interese. Tendremos presentaciones como esta durante el curso y cuando sea momento abriré los lugares para que se puedan organizar.
+
+** Criterios de Evaluación
+
+Para la evaluación del código que lleguen a escribir se contemplará la siguiente escala a manera de referencia.
+
+| Puntos | Descripción                                                                                                      |
+|--------+------------------------------------------------------------------------------------------------------------------|
+|      5 | Excelente. Código limpio, conciso, documentado y exploró los conceptos en profundidad.                           |
+|      4 | Completo y correcto. Incluye el análisis, el programa, el caso de pruebas y responde a las preguntas planteadas. |
+|      3 | Contiene unos cuentos errores menores.                                                                           |
+|      2 | Entrega parcial o tiene errores mayores.                                                                         |
+|      1 | Le faltó mucho.                                                                                                  |
+|      0 | Ni lo intentó :(                                                                                                 |
+
+
+** Calificación de los proyectos
+
+El proyecto se evaluará promediando las siguientes categorías. Se usará la escala recién mostrada en cada una de ellas.
+
+| Categoría     | Descripción                                                                                                                                                                                     |
+|---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Diseño        | El proyecto está bien organizado, fácil de seguir y se especifica claramente el problema a resolver.                                                                                            |
+| Documentación | Instrucciones de como ejecutar el código. Nombres de las variables y funciones son descriptivas. Incluye comentarios para que el lector pueda seguir el algoritmo. Se incluyen casos de prueba. |
+| Completez     | Todos los elementos del proyecto están incluidos.                                                                                                                                               |
+| Correcto      | La lógica del código es correcta y produce resultados con sentido.                                                                                                                              |
+| Análisis      | Todas las preguntas de análisis en la descripción del proyecto fueron resueltas. La interpretación del resultado está incluida.                                                                 |
+
+
+* Aclaraciones
+
+- El código *NO* es la respuesta.
+- La gráfica *NO* es la respuesta.
+- Debes de *mostrar que entendiste la solución y el problema*.
+
+* Código de conducta académica
+
+*Adaptado del departamento de ciencias de la computación de Grand Valley State University y de  George Washington University)*
+
+- Se espera que tú...
+    - Crees / desarrolles tus tareas (incluyendo el código fuente).
+    - Entiendas tus soluciones
+    - Reconozcas la ayuda de otros en la escritura.
+    - Cites la fuente en la tarea.
+    - Te protejas de sospecha al no permitir que otros vean tu tarea antes de que sea enviada.
+    - Contactes al profesor para aclarar los requerimientos de las tareas.
+    - Uses extensivamente Github para *socializar* el conocimiento, soluciones, dudas, etc.
+
+- Se prefiere que tú...
+    - Discutas diversos caminos para alcanzar la solución.
+    - Compartas tu conociemiento con otros estudiantes acerca de errores de sintáxis, trucos de código, etc.
+    - Proveas y recibas ayuda respecto a errores de ejecución.
+    - Proveas y recibas ayuda usando el ambiente de computación.
+    - Participes, junto con otros estudiantes, en discuiones hacer de las tareas, requerimientos, estrategais de solución, etc.
+
+- Eres culpable de romper el código de conducta si ...
+    - Le das tu código fuente a cualquiera en formato electrónico o analógico.
+    - Recibes de otro estudiante la solución en formato electrónico o analógico.
+    - Subes al repositorio como tuyos otros archivos, soluciones o documentos.
+    - Subes tareas sin indicar que colaboraste con alguien.
+    - Realizas modificaciones al código en un esfuerzo de ocultar un engaño.
+    - Usas material no permitido en examen o te comunicas con alguien de manera no autorizada durante el examen.
+
+* Ligas de interes
+
+- [[https://books.google.com.mx/books?id=YA9QDwAAQBAJ][Seven Databases in Seven Weeks]]
+- [[https://books.google.com.mx/books?id=wfnOBwAAQBAJ][NoSQL for mere mortals]]
+- [[https://books.google.com.mx/books?id=2eptBgAAQBAJ][Learning Spark]]
+
+* Finalmente...
+
+Primer tarea!!
+
+1. Instalar ~git~
+   1. Si estás en una distro de  ~GNU/Linux~ tipo ~Debian~: ~sudo apt-get install git~.
+   2. Si estás en una MacOS sigue las instrucciones de [[http://git-scm.com/download/mac][aquí]] y sigue las instrucciones.
+2. Crea una cuenta en github
+3. Tener WSL2 instalado (si tienes Windows)
+4. Instalar [[https://docs.docker.com/installation/#installation][docker]]
+5. Instalar *un editor de textos*
+   1. ~GNU/Emacs~
+   2. ~VsCode~
+
+* Emacs
+
+Después de tener converso al director de la Maestría, estoy convencido del valor que provee tener una herramienta como Emacs disponible, tanto para temas de escritura científica, como para programación, durante el curso verán que uso esta herramienta. Denle una oportunidad aunque su curva de aprendizaje sea un poco inclinada. :)
+
+* Usuarios Github
+
+Por favor [[https://forms.gle/mSDS15gNci5UFbwS9][entren aquí]] para llenar sus usuarios de github.
