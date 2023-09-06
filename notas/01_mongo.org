@@ -1,0 +1,758 @@
+#+TITLE: MongoDB
+#+AUTHOR: Prof. Miguel Angel Escalante Serrato
+#+EMAIL:  miguel.escalante@itam.mx
+#+STARTUP: showall
+
+
+* Intro Mongo
+
+Mongo en muchas maneras es una gran herramienta y muy versátil, depende de cómo la uses se puede adaptar a trabajar con tareas pequeñas, grandes, simples o complejas.
+
+Peeeeeero, el diablo está en los detalles como siempre, también se puede convertir en su peor pesadilla cuando a la creatividad no se le ponen riendas.
+
+MongoDB (Mongo pa los cuates) vió la luz por primera vez en 2009 y rápido se estableció como una de las bases de datos NoSQL más usadas, y actualmente es de las más populares si no es que la más popular. MongoDB se diseñó escalable desde un inicio ( el nombre viene de "hu mongo us" ) el desempeño y el fácil acceso a los datos fueron parte de su inicio.
+
+Es una base de datos documental, lo cual nos permite guardar objetos anidados, tanto como quieras *sigh*. No pide ningún tipo de /schema/ por lo que los documentos pueden tener campos que ningún otro documento tenga *DEEEP SIGH*.
+
+Aunque la flexibilidad nos llevaría a no tomarlo tan en serio, realmente hay aplicaciones enormes que lo usan en producción hoy en día, e.g. Foursquare, Comcast, Adobe, CERN (cacha los datos del LHC).
+
+*  Uso de MongoDB
+**  Creando una DB e insertando documentos
+
+Vamos a usar ~mongosh~ para tener una línea de comandos. Entraremos el comando:
+
+#+begin_src js
+use book
+#+end_src
+
+De acuerdo a la documentación, este comando "crea una base de datos", pero esto no es enteramente cierto. Esto solo aparta espacio en el MongoDB para comenzar a agregar documentos (ojo: no son registros). No tenemos una BD formalmente creada hasta no agregar documentos a esa BD.
+
+Para saber qué BD estamos usando:
+
+#+begin_src js
+db
+#+end_src
+
+Y para ver todas las DBs que tenemos disponibles:
+
+#+begin_src js
+show dbs
+#+end_src
+
+Vamos ahora a agregar un documento:
+
+#+begin_src js
+  db.towns.insertOne({
+     name: "New York",
+     population: "2022020202",
+     lastCensus: ISODate("2016-07-01"),
+     famousFor: ["the MOMA", "food", "The Met"],
+     mayor: {
+        name: "Bill de Blasio",
+        party: "D"
+     }
+  })
+#+end_src
+
+Analicemos línea por línea:
+
+1. *db* es el objeto con el que ~mongosh~ se refiere a la BD que estamos usando, en este caso ~book~. ⚠️*IMPORTANTE*⚠️ - después del elemento db, tenemos el elemento *towns*, esto es una *COLECCIÓN*. Recuerden la jerarquía de los JSON:
+
+
+Esto significa que estamos creando una colección de documentos llamada ~towns~.
+
+Igual, pongan atención a uno de los features más relevantes de las Document Databases:  *¡No necesitamos predefinir estructura/esquema para crear colecciones ni documentos!* 🤓
+
+Por fin! Libres de la tiranía de tener que definir, pensar, diseñar antes de tirar código!
+
+
+#+DOWNLOADED: screenshot @ 2022-09-08 01:58:46
+[[file:images/20220908-015846_screenshot.png]]
+
+
+El ~insertOne~ sirve para insertar solo 1 documento en la colección.
+
+El paréntesis que abre ~(~ indica el inicio de los argumentos de la función ~insertOne~.
+
+La llave que abre ~{~ indica que viene un documento JSON.
+
+2. Inicia el documento con atributos ~name~ (string), ~population~ (number), ~lastCensus~ (Date), ~famousFor~ (array de strings), y ~mayor~ de tipo DOCUMENTO, que es otro objeto anidado con sus propios atributos, ⚠️TODO SEPARADO POR COMAS⚠️.
+
+Qué pasa si se nos para una coma❓
+
+Un error como estos:
+
+#+begin_src js
+  db.towns.insertOne({
+      _id: 1,
+     name: "New York",
+     population: 22200000,
+     lastCensus: ISODate("2016-07-01"),
+     famousFor: ["the MOMA", "food", "The Met"],
+     mayor: {
+        name: "Bill de Blasio",
+        party: "D"
+     }
+  })
+#+end_src
+
+
+3. Al cerrar llaves y paréntesis, debemos tener esta salida:
+
+
+Qué pasa si volvemos a ejecutar la misma inserción❓
+
+Las Document Databases no tienen "llaves" como las BDs relacionales, entonces *al ejecutar una inserción 2 veces, para MongoDB son objetos enteramente diferentes*, y de hecho cada inserción se forma un ID autoasignado diferente (similar a las secuencias de las BDs relacionales). Adicionalmente, MongoDB crea un atributo llamado ~_id~ EN AUTOMÁGICO, sin preguntarnos, que es donde se guarda esta llave autogenerada. Este atributo se encuentra en TODOS los documentos de 1er nivel (es decir, no está en los documentos _anidados_).
+
+Estos IDs autogenerados son de 12 bytes y tienen la siguiente estructura:
+
+
+#+DOWNLOADED: screenshot @ 2022-09-08 02:01:50
+[[file:images/20220908-020150_screenshot.png]]
+
+
+- *~time~*: timestamp del sistema operativo
+- *~machine id~*: ID de la máquina
+- *~process id~*: ID del proceso (un concepto de Unix)
+- *~increment~*: contador autoincrementado de 3 bytes
+
+Este tipo de IDs autogenerados es que podemos tener varias instancias de MongoDB corriendo en la misma máquina y no tendremos riesgos de colisiones. YAY!
+
+**  Inertando múltiples documentos
+
+Intentemos ahora:
+
+#+begin_src js
+  db.towns.insertMany([
+      {
+          name: "New York",
+          population: 22200000,
+          lastCensus: ISODate("2016-07-01"),
+          famousFor: ["the MOMA", "food", "The Met"],
+          mayor: {
+              name: "Bill de Blasio",
+              party: "D"
+          }
+      },
+      {
+          name: "London",
+          population: 15000000,
+          lastCensus: ISODate("2018-01-01"),
+          famousFor: ["The British Museum", "Fish & Chips", "The Tate Modern"],
+          mayor: {
+              name: "Sadiq Khan",
+              party: "L"
+          }
+      },
+      {
+          name: "Mexicalpan de las Tunas",
+          population: 20000000,
+          lastCensus: ISODate("2019-01-01"),
+          famousFor: ["Museo Nacional de Antropología", "Tacos de Canasta", "Tlacoyos"],
+          mayor: {
+              name: "Claudia Sheinbaum",
+              party: "MORENA"
+          }
+      }
+  ])
+#+end_src
+
+** SQL es a BDs relacionales como JavaScript es a MongoDB
+
+El lenguaje base de MongoDB es JavaScript. JavaScript tiene mala fama entre la comunidad de ingeniería de software, pero es ampliamente gustado por la comunidad de desarrollo web. Principalmente por su inconsistencia...
+
+
+#+DOWNLOADED: screenshot @ 2022-09-08 02:12:41
+[[file:images/20220908-021241_screenshot.png]]
+
+
+...por su abundancia de frameworks inútiles...
+
+
+#+DOWNLOADED: screenshot @ 2022-09-08 02:12:55
+[[file:images/20220908-021255_screenshot.png]]
+
+
+...aunque es el primero que nos ofrece productividad expedita.
+
+Usaremos JavaScript para todo con MongoDB, hasta pedir ayuda:
+
+#+begin_src js
+db.help()
+db.towns.help()
+#+end_src
+
+Igual podemos identificar el tipo de un objeto, justo como en JavaScript:
+
+#+begin_src js
+typeof db
+typeof db.towns
+typeof db.towns.insertOne
+#+end_src
+
+Examinemos el código fuente de la función ~insertOne~:
+
+#+begin_src js
+db.towns.insertOne //sin paréntesis
+#+end_src
+
+Esto sería como ver qué hay dentro del comando ~INSERT~ en una BD relacional, cosa que no podemos hacer!
+
+Vamos a crear nuestra propia función para insertar ciudades en la colección ~db.towns~:
+
+#+begin_src js
+function insertCity(name, population, lastCensus, famousFor, mayorInfo) {
+   return(db.towns.insertOne({
+      name: name,
+      population: population,
+      lastCensus: ISODate(lastCensus),
+      famousFor: famousFor,
+      mayor : mayorInfo
+   }));
+}
+#+end_src
+
+Esto es como un ~create function insertcity (string, numeric, date, string, string) AS 'insert into table city values ($1,$2,$3,$4,$5)'~ para PostgreSQL.
+
+Podemos llamar esta función ahora sin el ~db.towns.insertOne~. No es mucho ahorro, pero con _user-defined functions_ podemos hacer cosas más elaboradas:
+
+#+begin_src js
+insertCity("Punxsutawney", 6200, '2016-01-31', ["Punxsutawney Phil"], { name : "Richard Alexander" })
+insertCity("Portland", 582000, '2016-09-20', ["beer", "food", "Portlandia"], { name : "Ted Wheeler", party : "D" })
+#+end_src
+
+** Leyendo datos: SELECT en SQL, find() en MongoDB
+
+Para ensayar las funciones de consulta, debemos importar algunas BDs de prueba.
+
+*** Vamos a clonar este repo en nuestro directorio preferido. Opcionalmente podemos bajar el archivo ZIP de ese URL
+
+#+begin_src sh
+  git clone https://github.com/neelabalan/mongodb-sample-dataset
+#+end_src
+
+*** Vamos a utilizar el comando import de esa localidad para insertar uno de los JSONs del repo que descargamos:
+
+#+begin_src sh
+  docker exec mongo mongoimport --db trainingsessions --drop --file ./mongodb-sample-dataset/sample_training/tweets.json
+  docker exec -it mongo mongosh
+#+end_src
+
+¿Por qué falló?
+#+NOTE Agregar por qué falló y cómo arreglarlo
+#+begin_src shell
+
+  docker cp mongodb-sample-dataset/sample_training/tweets.json mongo:/tweets.json
+  docker exec mongo mongoimport --db trainingsessions --drop --file /tweets.json
+
+#+end_src
+
+#+begin_src shell
+  docker stop mongo
+  docker rm mongo
+  docker run \
+         -p 27017:27017 \
+         -v mongo-data:/data/db \
+         -v $PWD/mongodb-sample-dataset:/mongodb-sample-dataset \
+         --name mongo \
+         -d \
+         mongo
+  docker exec mongo mongoimport --db trainingsessions --drop --file /mongodb-sample-dataset/sample_training/tweets.json
+#+end_src
+
+#+begin_src shell
+  cat mongodb-sample-dataset/sample_training/tweets.json | \
+      docker exec -i \
+             mongo \
+             mongoimport \
+             --db trainingsessions \
+             --drop \
+             -c \
+             tweets
+#+end_src
+*** Validamos que haya sido insertada esa colección correctamente:
+
+#+begin_src js
+use trainingsessions
+db.getCollectionNames()
+db.tweets.find()
+#+end_src
+
+Ahora si vamos a leer estos datos. Para leer datos en MongoDB la función base es ~find()~:
+
+- ~db.tweets.find()~ trae todos los _documentos_ de la _colección_ ~tweets~.
+- ~db.tweets.find({ "_id" : ObjectId("5c8eccb0caa187d17ca624d4") })~ va a traer el documento con ID ~5c8eccb0caa187d17ca624d4~. Recordemos que los ID son autogenerados y el atributo ~_id~ es creado automáticamente
+- ~db.tweets.find( {"_id" : ObjectId("5c8eccb0caa187d17ca624d4")}, {population : 1} )~ va a traer el documento con ID ~611ce2e73afe7ee944574e51~ pero solo su atributo ~population~ similar a un ~select population from towns where id = 611ce2e73afe7ee944574e51~
+- ~db.towns.find( {"_id" : ObjectId("611ce2e73afe7ee944574e51")}, {population : 0} )~ va a traer el mismo documento, pero ahora con todos sus atributos *EXCEPTO* ~population~
+- ~db.towns.find( {population : 6200})~ va a traer el documento con ~population~ igual a _6200_
+- ~db.towns.find( {name : "London"})~ va a traer el documento con ~name~ igual a _"London"_
+
+En general, podemos decir que la función ~find()~ frecuentemente es llamada con 2 _documentos_ como argumento:
+
+- 1 para filtrado, similar al ~WHERE~ de SQL. Esto se le llama *FILTER* en bases de datos de documentos.
+- 1 para _selección_ de atributos, similar al ~SELECT~ de SQL. Esto se le llama *PROJECT* en bases de datos de documentos.
+
+Vamos a establecer algunas equivalencias entre SQL y MongoDB con la siguiente tabla y la colección ~tweets~ que acabamos de importar. Para ejecutar los ejemplos primero debemos entrar ~use trainingsessions~.
+
+| Operación                  | Sintaxis                                 | E.g.                                                       | Equivalencia RDBMS                                                                                                                                |
+|----------------------------+------------------------------------------+------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------|
+| Igual a X                  | ~{"key":[value]}~                        | ~db.tweets.find({"source":"web"})~                         | where source = 'web'                                                                                                                              |
+| AND en el WHERE            | ~{"key1":[value1],"key2":[value2]}~      | ~db.tweets.find({"source":"web","favorited":false})~       | where source = 'web' *and* favorited = false                                                                                                      |
+| Menor que                  | ~{"key":{$lt:[value]}}~                  | ~db.tweets.find({"user.friends_count":{$lt:50}})~          | where user.friends_count < 50 (aquí estamos "viajando" del documento principal al documento anidado ~user~ y de ahí a su atributo ~friends_count~ |
+| Menor o igual a            | ~{"key":{$lte:[value]}}~                 | ~db.tweets.find({"user.friends_count":{$lte:50}})~         | where user.friends_count <= 50                                                                                                                    |
+| Mayor que                  | ~{"key":{$gt:[value]}}~                  | ~db.tweets.find({"user.friends_count":{$gt:50}})~          | where user.friends_count > 50                                                                                                                     |
+| Mayor o igual a            | ~{"key":{$gte:[value]}}~                 | ~db.tweets.find({"user.friends_count":{$gte:50}})~         | where user.friends_count >= 50                                                                                                                    |
+| Diferente a                | ~{"key":{$ne:[value]}}~                  | ~db.tweets.find({"user.friends_count":{$ne:50}})~          | where user.friends_count != 50                                                                                                                    |
+| Valores presentes en array | ~{"key":{$in:[value1,value2...valueN]}}~ | ~db.tweets.find({"entities.urls.indices":{$in:[54,74]}})~  | where entities.urls.indices *in* (54,74)                                                                                                          |
+| Valores ausentes en array  | ~{"key":{$nin:[value]}}~                 | ~db.tweets.find({"entities.urls.indices":{$nin:[54,74]}})~ | where entities.urls.indices *not in* (54,74)                                                                                                      |
+
+** Uso de expresiones regulares en ~find()~
+
+Para lograr emular el ~LIKE~ de SQL en MongoDB, debemos usar forzosamente expresiones regulares. Por ejemplo:
+
+#+begin_src js
+db.tweets.find({"user.url":/^http(s|):\/\/(www\.|)facebook\.com/})
+#+end_src
+
+Esto es similar a la sentencia SQL:
+
+#+end_srcsql
+...where user.url like 'http?://facebook.com%'
+#+end_src
+
+Esto va a encontrar todos los tuits cuyo URL del perfil de usuario sean ligas a perfiles de FB.
+
+Para encontrar todos los tuits con el hashtag que comience on ~#polit~:
+
+#+begin_src js
+db.tweets.find({"entities.hashtags.text":/^polit/})
+#+end_src
+
+En este caso, el caracter ~^~ indica que el match debe darse desde el principio, porque si no lo ponemos, vamos a hacer match con este tuit que anda por ahí:
+
+#+begin_src js
+{
+   "_id":{
+      "$oid":"5c8eccb1caa187d17ca64de8"
+   },
+   "text":"Balmoral, booze and the rest of Blair's book digested  http://bit.ly/9KwcSP  #Blair #AJourney #UKpolitics #Labour #Bush",
+   "in_reply_to_status_id":null,
+   "retweet_count":null,
+   "contributors":null,
+   "created_at":"Thu Sep 02 18:34:32 +0000 2010",
+   "geo":null,
+   "source":"<a href=\"http://www.tweetdeck.com\" rel=\"nofollow\">TweetDeck</a>",
+   "coordinates":null,
+   "in_reply_to_screen_name":null,
+   "truncated":false,
+   "entities":{
+      "user_mentions":[
+
+      ],
+      "urls":[
+         {
+            "indices":[
+               55,
+               75
+            ],
+            "url":"http://bit.ly/9KwcSP",
+            "expanded_url":null
+         }
+      ],
+      "hashtags":[
+         {
+            "text":"Blair",
+            "indices":[
+               77,
+               83
+            ]
+         },
+         {
+            "text":"AJourney",
+            "indices":[
+               84,
+               93
+            ]
+         },
+         {
+            "text":"UKpolitics",
+            "indices":[
+               94,
+               105
+            ]
+         },
+         {
+            "text":"Labour",
+            "indices":[
+               106,
+               113
+            ]
+         },
+         {
+            "text":"Bush",
+            "indices":[
+               114,
+               119
+            ]
+         }
+      ]
+   },
+   "retweeted":false,
+   "place":null,
+   "user":{
+      "friends_count":556,
+      "profile_sidebar_fill_color":"DDEEF6",
+      "location":"",
+      "verified":false,
+      "follow_request_sent":null,
+      "favourites_count":0,
+      "profile_sidebar_border_color":"C0DEED",
+      "profile_image_url":"http://a2.twimg.com/profile_images/1026348478/US-UK-blend_normal.png",
+      "geo_enabled":false,
+      "created_at":"Sat Jun 26 14:58:34 +0000 2010",
+      "description":"Promoting and discussing the special relatonship between the United States and the United Kingdom.",
+      "time_zone":null,
+      "url":null,
+      "screen_name":"USUKrelations",
+      "notifications":null,
+      "profile_background_color":"C0DEED",
+      "listed_count":4,
+      "lang":"en",
+      "profile_background_image_url":"http://a3.twimg.com/profile_background_images/116769793/specialrelations.jpg",
+      "statuses_count":647,
+      "following":null,
+      "profile_text_color":"333333",
+      "protected":false,
+      "show_all_inline_media":false,
+      "profile_background_tile":true,
+      "name":"Special Relationship",
+      "contributors_enabled":false,
+      "profile_link_color":"0084B4",
+      "followers_count":264,
+      "id":159870717,
+      "profile_use_background_image":true,
+      "utc_offset":null
+   },
+   "favorited":false,
+   "in_reply_to_user_id":null,
+   "id":{
+      "$numberLong":"22820800600"
+   }
+}
+#+end_src
+
+En esta materia no veremos a fondo expresiones regulares, pero aquí 2 ligas útiles:
+
+1. https://regexone.com/ es un crash course rápido para aprender las bases de las expresiones regulares
+2. https://regexr.com/ es una plataformita para probar sus regexp contra ejemplos suyos o de terceros
+
+*⚠️IMPORTANTE:⚠️* Las expresiones regulares que deben ir en estos queries son [[https://en.wikipedia.org/wiki/Perl_Compatible_Regular_Expressions][Perl-Compatible Regular Expressions]].
+
+** Queries a arrays
+
+A diferencia de las RDBMS, las Document Databases aceptan en sus atributos arrays de valores.
+
+Recuerden que las reglas de diseño de las relacionales nos obligan a que *un atributo tenga solo 1 valor*, mientras que en las de documentos un atributo puede ser un string, un número, o un arreglo de cualquiera de ambos.
+
+Este query va a regresar el documento que tenga *ÚNICA Y EXACTA Y ORDENADAMENTE* los elementos *54 y 74*.
+
+#+begin_src js
+db.tweets.find({"entities.urls.indices":[54,74]})
+#+end_src
+Osea, si hay un elemento que tiene el orden *74 y 54*, no no lo va a encontrar.
+
+Para buscarlos a todos, *sin importar orden*, usamos el operador ~$all~:
+
+#+begin_src js
+db.tweets.find({"entities.urls.indices":{$all:[54,74]}})
+#+end_src
+
+Para buscar todos los documentos que *AL MENOS* tengan uno de los elementos:
+
+#+begin_src js
+db.tweets.find({"entities.urls.indices":54})
+#+end_src
+
+O usar el operador ~$in~ que vimos arriba.
+
+Para buscar un rango en un array numérico, en este caso, entre 50 y 90, inclusive:
+
+#+begin_src js
+db.tweets.find({"entities.urls.indices":{$lte:50, $gte:90}})
+#+end_src
+
+Y para buscar documentos cuyo N-avo elemento sea igual a X:
+
+#+begin_src js
+db.tweets.find({"entities.urls.indices.1":59})
+#+end_src
+
+Recordemos  que los arrays en MongoDB *están indexados desde 0 y no desde 1*.
+
+Para buscar un documento por el tamaño de uno de sus atributos de tipo array:
+
+#+begin_src js
+db.tweets.find({"entities.hashtags":{$size:7}})
+#+end_src
+
+Y para buscar documentos cuyos atributos tipo array tengan más de 7 elementos:
+
+#+begin_src js
+db.tweets.find({"entities.hashtags.7":{$exists:true}})
+#+end_src
+
+Podemos combinar operadores ~$exists~, ~$gte~ y ~$lte~ para buscar documentos que tengan un array entre N y M elementos. El siguiente query regresa los tuits que tengan *EXACTAMENTE* un hashtag, aprovechando la _dot notation (.)_ para viajar de ~entities->hashtags->[elemento del array con índice 0]~ y verificar su existencia con ~{$exists:true}~, y hacer el mismo viaje al ~[elemento del array con índice 1]~ y asegurarnos que no existe con ~{$exists:false}~.
+
+#+begin_src js
+db.tweets.find({"entities.hashtags.1":{$exists:false},"entities.hashtags.0":{$exists:true}},{"entities":1})
+#+end_src
+
+El racional de esta forma de ~find()~ es que si buscamos arrays con num de elementos mayores a 7, entonces tendremos arrays cuyo elemento en la posición 7 (que realmente es la posición 8 porque *comenzamos desde 0*) debe tener un elemento presente.
+
+** Queries a documentos anidados y arrays de documentos
+
+Para los siguientes ejemplos vamos a insertar estos documentos con la función ~insertMany()~:
+
+#+begin_src js
+[
+   {
+      "item":"journal",
+      "instock":[
+         {
+            "warehouse":"A",
+            "qty":5
+         },
+         {
+            "warehouse":"C",
+            "qty":15
+         }
+      ]
+   },
+   {
+      "item":"notebook",
+      "instock":[
+         {
+            "warehouse":"C",
+            "qty":5
+         }
+      ]
+   },
+   {
+      "item":"paper",
+      "instock":[
+         {
+            "warehouse":"A",
+            "qty":60
+         },
+         {
+            "warehouse":"B",
+            "qty":15
+         }
+      ]
+   },
+   {
+      "item":"planner",
+      "instock":[
+         {
+            "warehouse":"A",
+            "qty":40
+         },
+         {
+            "warehouse":"B",
+            "qty":5
+         }
+      ]
+   },
+   {
+      "item":"postcard",
+      "instock":[
+         {
+            "warehouse":"B",
+            "qty":15
+         },
+         {
+            "warehouse":"C",
+            "qty":35
+         }
+      ]
+   }
+]
+#+end_src
+
+1. Creen una nueva BD llamada ~warehouse~
+2. Creen una colección llamada ~inventory~
+3. Inserten estos documentos de arriba
+
+El siguiente query va a regresar todos los artículos que estén en en warehouse A y de los que tengamos 5 en inventario:
+
+#+begin_src js
+db.inventory.find( { "instock": { warehouse: "A", qty: 5 } } )
+#+end_src
+
+El valor de retorno es:
+
+#+begin_src js
+[
+  {
+    _id: ObjectId("612339842cd2fe46682acd32"),
+    item: 'journal',
+    instock: [ { warehouse: 'A', qty: 5 }, { warehouse: 'C', qty: 15 } ]
+  }
+]
+#+end_src
+
+El query no nos está regresando 2 documentos, sino el documento en el array ~instock~ que hace match con las condiciones que le dimos.
+
+*👀OJO:👀* esta sintaxis es parecida a la búsqueda de documentos de 1er nivel (~find("key1":value1,"key2":value2~), pero como estamos buscando documentos *ANIDADOS O EN ARRAY*, entonces debemos de especificar el nombre del array ~instock~ antes de los params de búsqueda.
+
+Una gran diferencia es en el orden de los atributos que estemos buscando en el array de documentos. Por ejemplo, si ejecutamos esto:
+
+#+begin_src js
+db.inventory.find( { "instock": { qty: 5, warehouse: "A" } } )
+#+end_src
+
+Va a regresar *NADA*, porque ningún documento dentro del array tiene primero el atributo ~qty~.
+
+El siguiente query va a regresar todos los documentos de ~instock~ que tengan un ~qty~ menor o igual a 20, junto con los documentos que acompañen a ese que hace match:
+
+#+begin_src js
+db.inventory.find( { "instock.qty": { $lte: 20 } } )
+#+end_src
+
+Este query también es similar a los que vimos para consultar documentos de 1er nivel, con la diferencia de que ~instock~ es un array de documentos y no un atributo o un array de elementos individuales.
+
+Si deseamos limitar la búsqueda a un índice del array, como para evitar tener un documento que no cumpla con las condiciones, podemos especificarlo así:
+
+#+begin_src js
+  db.inventory.find( { 'instock.0.qty': { $lte: 20 } } )
+#+end_src
+
+Este query nos regresará del arreglo ~instock~ los *PRIMEROS* documentos (índice 0) cuyo atributo ~qty~ sea igual o menor a 20.
+
+** El operador ~$elemMatch~
+
+Hay estructuras de documentos de varios niveles y con arreglos anidados donde al lanzar queries a estos arreglos puede regresarnos documentos que no necesariamente cumplen el criterio.
+
+1. Vamos a crear otra BD llamada "store"
+2. Con una colección llamada "articles"
+3. Insertamos este array de documentos con ~insertMany~
+
+#+begin_src js
+db.articles.insertMany([
+{
+	"_id" : 1,
+	"description" : "DESCRIPTION ARTICLE AB",
+	"article_code" : "AB",
+	"purchase" : [
+		{
+			"company" : 1,
+			"cost" : NumberDecimal("80.010000")
+		},
+		{
+			"company" : 2,
+			"cost" : NumberDecimal("85.820000")
+		},
+		{
+			"company" : 3,
+			"cost" : NumberDecimal("79.910000")
+		}
+	],
+	"stock" : [
+	    {
+	        "country" : "01",
+	        "warehouse" : {
+	            "code" : "02",
+	            "units" : 10
+	        }
+	    },
+	    {
+	        "country" : "02",
+	        "warehouse" : {
+	            "code" : "02",
+	            "units" : 8
+	        }
+	    }
+	]
+},
+{
+	"_id" : 2,
+	"description" : "DESCRIPTION ARTICLE AC",
+	"article_code" : "AC",
+	"purchase" : [
+		{
+			"company" : 1,
+			"cost" : NumberDecimal("90.010000")
+		},
+		{
+			"company" : 2,
+			"cost" : NumberDecimal("95.820000")
+		},
+		{
+			"company" : 3,
+			"cost" : NumberDecimal("89.910000")
+		}
+	],
+	"stock" : [
+	    {
+	        "country" : "01",
+	        "warehouse" : {
+	            "code" : "01",
+	            "units" : 20
+	        }
+	    },
+	    {
+	        "country" : "02",
+	        "warehouse" : {
+	            "code" : "02",
+	            "units" : 28
+	        }
+	    }
+	]
+}
+]);
+#+end_src
+
+Qué función ~find()~ necesitamos para obtener los "artículos" con ~stock~ en el ~warehouse~ 02 en el ~country~ 01?
+
+#+begin_src js
+db.articles.find({"stock.country":"01","stock.warehouse.code":"02"})
+#+end_src
+
+Ese query nos va a regresar los 2 documentos que insertamos:
+
+
+Como podemos ver, el array ~stock~ del documento de 1er nivel con ~_id~ 2 cumple con las condiciones *POR SEPARADO*, por lo tanto este query nos puede regresar resultados espurios _si es que estamos buscando solamente el documento cuyo array ~stock~ tenga un elemento que cumpla *CON AMBOS CRITERIOS*.
+
+Para tener el comportamiento esperado, debemos usar el operador ~$elemMatch~:
+
+#+begin_src js
+db.articles.find({ stock : { $elemMatch : { country : "01", "warehouse.code" : "02" } } })
+#+end_src
+
+Esto nos debe dar el documento correcto:
+
+
+El operador ~$elemMatch~ sirve para encontrar elementos individuales *que cumplan con múltiples criterios _TODOS JUNTOS_ (a manera de ~and~)*, al contrario del funcionamiento normal sobre arrays, donde nos regresa los arreglos que cumplan con *_AL MENOS_* uno de los criterios *_POR SEPARADO_*.
+
+** El operador ~$slice~
+
+El operador ~$slice~, por su parte, "rebana" un arreglo de un documento para regresarnos solamente N elementos:
+
+#+begin_src js
+db.articles.find({},{"purchase":{$slice:1}})
+#+end_src
+
+Este query nos regresará todos los documentos, pero su array ~purchase~ solo tendrá el 1er elemento. ~$slice~ acepta *números positivos* para "rebanar" el array de izq a derecha, y *números negativos* para "rebanarlo" de derecha a izq:}
+
+#+begin_src js
+db.articles.find({},{"purchase":{$slice:-2}})
+#+end_src
+
+Del mismo modo, podemos usar el operador ~$slice~ para obtener un elemento en específico del array usando la forma ~find({},{atributo:{$slice:[indice_inicio, numero_de_elementos]}}~. El siguiente comando traerá solamente el 2o elemento de los arrays ~purchase~.
+
+#+begin_src js
+db.articles.find({},{purchase:{$slice:[1,1]}})
+#+end_src
+
+Aquí nos posicionamos en el índice 1 (el 2o elemento), y a partir de ahí, traemos 1 elemento.
+

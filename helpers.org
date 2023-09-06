@@ -1,0 +1,26 @@
+#+TITLE: Helpers to startup Databases
+#+AUTHOR: Prof. Miguel Angel Escalante Serrato
+#+EMAIL:  miguel.escalante@itam.mx
+
+* Mongo
+** Inicio de Mongo
+
+#+begin_src shell
+  # Crear el volumen de mongo
+  docker volume create mongo-data
+  #Detener el contenedor
+  docker stop mongo
+  # Borrar el contenedor
+  docker rm mongo
+  # Correr el docker
+  docker run -p 27017:27017 \
+         -v mongo-data:/data/db \
+         --name mongo \
+         -d \
+         mongo
+#+end_src
+
+** Correr el shell de mongo
+#+begin_src shell
+  docker exec -it mongo mongosh
+#+end_src
