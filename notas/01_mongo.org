@@ -44,7 +44,7 @@ Vamos ahora a agregar un documento:
 #+begin_src js
   db.towns.insertOne({
      name: "New York",
-     population: "2022020202",
+     population: 8000000,
      lastCensus: ISODate("2016-07-01"),
      famousFor: ["the MOMA", "food", "The Met"],
      mayor: {
@@ -136,13 +136,6 @@ Intentemos ahora:
       },
       {
           name: "London",
-          population: 15000000,
-          lastCensus: ISODate("2018-01-01"),
-          famousFor: ["The British Museum", "Fish & Chips", "The Tate Modern"],
-          mayor: {
-              name: "Sadiq Khan",
-              party: "L"
-          }
       },
       {
           name: "Mexicalpan de las Tunas",
@@ -152,7 +145,8 @@ Intentemos ahora:
           mayor: {
               name: "Claudia Sheinbaum",
               party: "MORENA"
-          }
+          },
+          hola:"mellamomiguel"
       }
   ])
 #+end_src
@@ -235,13 +229,12 @@ Para ensayar las funciones de consulta, debemos importar algunas BDs de prueba.
 
 #+begin_src sh
   docker exec mongo mongoimport --db trainingsessions --drop --file ./mongodb-sample-dataset/sample_training/tweets.json
-  docker exec -it mongo mongosh
+  docker exec -it mongo bash
 #+end_src
 
 ¿Por qué falló?
 #+NOTE Agregar por qué falló y cómo arreglarlo
 #+begin_src shell
-
   docker cp mongodb-sample-dataset/sample_training/tweets.json mongo:/tweets.json
   docker exec mongo mongoimport --db trainingsessions --drop --file /tweets.json
 
@@ -269,6 +262,7 @@ Para ensayar las funciones de consulta, debemos importar algunas BDs de prueba.
              --drop \
              -c \
              tweets
+  docker exec -it mongo mongosh
 #+end_src
 *** Validamos que haya sido insertada esa colección correctamente:
 
@@ -282,7 +276,7 @@ Ahora si vamos a leer estos datos. Para leer datos en MongoDB la función base e
 
 - ~db.tweets.find()~ trae todos los _documentos_ de la _colección_ ~tweets~.
 - ~db.tweets.find({ "_id" : ObjectId("5c8eccb0caa187d17ca624d4") })~ va a traer el documento con ID ~5c8eccb0caa187d17ca624d4~. Recordemos que los ID son autogenerados y el atributo ~_id~ es creado automáticamente
-- ~db.tweets.find( {"_id" : ObjectId("5c8eccb0caa187d17ca624d4")}, {population : 1} )~ va a traer el documento con ID ~611ce2e73afe7ee944574e51~ pero solo su atributo ~population~ similar a un ~select population from towns where id = 611ce2e73afe7ee944574e51~
+- ~db.tweets.find( {"_id" : ObjectId("5c8eccb0caa187d17ca624d4")}, {"source": 1} )~ va a traer el documento con ID ~611ce2e73afe7ee944574e51~ pero solo su atributo ~population~ similar a un ~select population from towns where id = 611ce2e73afe7ee944574e51~
 - ~db.towns.find( {"_id" : ObjectId("611ce2e73afe7ee944574e51")}, {population : 0} )~ va a traer el mismo documento, pero ahora con todos sus atributos *EXCEPTO* ~population~
 - ~db.towns.find( {population : 6200})~ va a traer el documento con ~population~ igual a _6200_
 - ~db.towns.find( {name : "London"})~ va a traer el documento con ~name~ igual a _"London"_
@@ -296,15 +290,15 @@ Vamos a establecer algunas equivalencias entre SQL y MongoDB con la siguiente ta
 
 | Operación                  | Sintaxis                                 | E.g.                                                       | Equivalencia RDBMS                                                                                                                                |
 |----------------------------+------------------------------------------+------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------|
-| Igual a X                  | ~{"key":[value]}~                        | ~db.tweets.find({"source":"web"})~                         | where source = 'web'                                                                                                                              |
+| Igual a X                  | ~{"key":value}~                        | ~db.tweets.find({"source":"web"})~                         | where source = 'web'                                                                                                                              |
 | AND en el WHERE            | ~{"key1":[value1],"key2":[value2]}~      | ~db.tweets.find({"source":"web","favorited":false})~       | where source = 'web' *and* favorited = false                                                                                                      |
-| Menor que                  | ~{"key":{$lt:[value]}}~                  | ~db.tweets.find({"user.friends_count":{$lt:50}})~          | where user.friends_count < 50 (aquí estamos "viajando" del documento principal al documento anidado ~user~ y de ahí a su atributo ~friends_count~ |
-| Menor o igual a            | ~{"key":{$lte:[value]}}~                 | ~db.tweets.find({"user.friends_count":{$lte:50}})~         | where user.friends_count <= 50                                                                                                                    |
-| Mayor que                  | ~{"key":{$gt:[value]}}~                  | ~db.tweets.find({"user.friends_count":{$gt:50}})~          | where user.friends_count > 50                                                                                                                     |
-| Mayor o igual a            | ~{"key":{$gte:[value]}}~                 | ~db.tweets.find({"user.friends_count":{$gte:50}})~         | where user.friends_count >= 50                                                                                                                    |
-| Diferente a                | ~{"key":{$ne:[value]}}~                  | ~db.tweets.find({"user.friends_count":{$ne:50}})~          | where user.friends_count != 50                                                                                                                    |
+| Menor que                  | ~{"key":{$lt:value}}~                  | ~db.tweets.find({"user.friends_count":{$lt:50}})~          | where user.friends_count < 50 (aquí estamos "viajando" del documento principal al documento anidado ~user~ y de ahí a su atributo ~friends_count~ |
+| Menor o igual a            | ~{"key":{$lte:value}}~                 | ~db.tweets.find({"user.friends_count":{$lte:50}})~         | where user.friends_count <= 50                                                                                                                    |
+| Mayor que                  | ~{"key":{$gt:value}}~                  | ~db.tweets.find({"user.friends_count":{$gt:50}})~          | where user.friends_count > 50                                                                                                                     |
+| Mayor o igual a            | ~{"key":{$gte:value}}~                 | ~db.tweets.find({"user.friends_count":{$gte:50}})~         | where user.friends_count >= 50                                                                                                                    |
+| Diferente a                | ~{"key":{$ne:value}}~                  | ~db.tweets.find({"user.friends_count":{$ne:50}})~          | where user.friends_count != 50                                                                                                                    |
 | Valores presentes en array | ~{"key":{$in:[value1,value2...valueN]}}~ | ~db.tweets.find({"entities.urls.indices":{$in:[54,74]}})~  | where entities.urls.indices *in* (54,74)                                                                                                          |
-| Valores ausentes en array  | ~{"key":{$nin:[value]}}~                 | ~db.tweets.find({"entities.urls.indices":{$nin:[54,74]}})~ | where entities.urls.indices *not in* (54,74)                                                                                                      |
+| Valores ausentes en array  | ~{"key":{$nin:value}}~                 | ~db.tweets.find({"entities.urls.indices":{$nin:[54,74]}})~ | where entities.urls.indices *not in* (54,74)                                                                                                      |
 
 ** Uso de expresiones regulares en ~find()~
 
