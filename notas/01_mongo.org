@@ -1,3 +1,4 @@
+
 #+TITLE: MongoDB
 #+AUTHOR: Prof. Miguel Angel Escalante Serrato
 #+EMAIL:  miguel.escalante@itam.mx
@@ -458,13 +459,13 @@ Osea, si hay un elemento que tiene el orden *74 y 54*, no no lo va a encontrar.
 Para buscarlos a todos, *sin importar orden*, usamos el operador ~$all~:
 
 #+begin_src js
-db.tweets.find({"entities.urls.indices":{$all:[54,74]}})
+db.tweets.find({"entities.urls.indices":{$all:[54,74]}},{"entities.urls.indices":1})
 #+end_src
 
 Para buscar todos los documentos que *AL MENOS* tengan uno de los elementos:
 
 #+begin_src js
-db.tweets.find({"entities.urls.indices":54})
+db.tweets.find({"entities.urls.indices":54},{"entities.urls.indices":1})
 #+end_src
 
 O usar el operador ~$in~ que vimos arriba.
@@ -472,13 +473,13 @@ O usar el operador ~$in~ que vimos arriba.
 Para buscar un rango en un array numérico, en este caso, entre 50 y 90, inclusive:
 
 #+begin_src js
-db.tweets.find({"entities.urls.indices":{$lte:50, $gte:90}})
+db.tweets.find({"entities.urls.indices":{$lte:50, $gte:90}},{"entities.urls.indices":1})
 #+end_src
 
 Y para buscar documentos cuyo N-avo elemento sea igual a X:
 
 #+begin_src js
-db.tweets.find({"entities.urls.indices.1":59})
+db.tweets.find({"entities.urls.indices.0":59},{"entities.urls.indices":1})
 #+end_src
 
 Recordemos  que los arrays en MongoDB *están indexados desde 0 y no desde 1*.
@@ -486,7 +487,7 @@ Recordemos  que los arrays en MongoDB *están indexados desde 0 y no desde 1*.
 Para buscar un documento por el tamaño de uno de sus atributos de tipo array:
 
 #+begin_src js
-db.tweets.find({"entities.hashtags":{$size:7}})
+db.tweets.find({"retweeted":{$size:7}})
 #+end_src
 
 Y para buscar documentos cuyos atributos tipo array tengan más de 7 elementos:
@@ -745,7 +746,7 @@ db.articles.find({},{"purchase":{$slice:-2}})
 Del mismo modo, podemos usar el operador ~$slice~ para obtener un elemento en específico del array usando la forma ~find({},{atributo:{$slice:[indice_inicio, numero_de_elementos]}}~. El siguiente comando traerá solamente el 2o elemento de los arrays ~purchase~.
 
 #+begin_src js
-db.articles.find({},{purchase:{$slice:[1,1]}})
+db.articles.find({},{purchase:{$slice:[1,3]}})
 #+end_src
 
 Aquí nos posicionamos en el índice 1 (el 2o elemento), y a partir de ahí, traemos 1 elemento.

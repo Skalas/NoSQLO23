@@ -1,0 +1,33 @@
+
+#+TITLE: API HTTP
+#+AUTHOR: Prof. Miguel Angel Escalante Serrato
+#+EMAIL:  miguel.escalante@itam.mx
+
+* Operaciones básicas
+
+API: Interfaz de programación de aplicaciones, es un conjunto de definiciones y protocolos para interactuar con software en las aplicaciones. Nos ayudan a:
+- Interactuar con partes internas de aplicaciones
+- Interactuar con componentes externos a nuestras aplicaciones
+- Interactuar con páginas web de manera programática
+
+Las APIs son programitas que corren en servidores y que generalmente ejecutan las 4 operaciones básicas sobre BD:
+
+1. CREATE
+2. RETRIEVE
+3. UPDATE
+4. DELETE
+
+En conjunto estas operaciones las llamamos CRUD.
+
+* HTTP protocol
+
+En el 2000 a Roy Felding se le ocurrió que estos "verbos" se parecían un buen a los "verbos" del protocolo HTTP:
+
+1. CREATE
+2. GET
+3. POST
+4. DELETE
+
+** Ejercicio del resto de la clase:
+
+Conectarse a la API : https://pokeapi.co/
