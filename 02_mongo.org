@@ -1,0 +1,876 @@
+#+TITLE: Mongo pt. 2
+#+AUTHOR: Prof. Miguel Angel Escalante Serrato
+#+EMAIL:  miguel.escalante@itam.mx
+#+DATE: 2-Mar-2023
+#+STARTUP: showall
+
+* Agregaciones
+
+Las agregaciones son queries que colapsan registros individuales en un solo resultado al mismo tiempo que aplican algún operador sobre ellos como conteo, sumar, promedios, etc.
+
+Estas operaciones *destruyen información*, es decir, el promedio, suma o conteo del grupo colapsado pierde información de cada miembro individual.
+
+Como analistas de datos pocas veces haremos agregaciones directo en las bases de datos fuente, y probablemente primero las movamos a nuestro data lake y ahí hacerlas. Pero si no tuvieramos uno, esta es la forma de hacerlas:
+
+Para esta parte de la sesión vamos a crear la BD ~3tdb~ y las colecciones ~universities~ y ~courses~
+
+#+begin_src js
+  use 3tdb;
+  db.universities.insertMany([
+      {
+          country : 'Spain',
+          city : 'Salamanca',
+          name : 'USAL',
+          location : {
+              type : 'Point',
+              coordinates : [ -5.6722512,17, 40.9607792 ]
+          },
+          students : [
+              { year : 2014, number : 24774 },
+              { year : 2015, number : 23166 },
+              { year : 2016, number : 21913 },
+              { year : 2017, number : 21715 }
+          ]
+      },
+      {
+          country : 'Spain',
+          city : 'Salamanca',
+          name : 'UPSA',
+          location : {
+              type : 'Point',
+              coordinates : [ -5.6691191,17, 40.9631732 ]
+          },
+          students : [
+              { year : 2014, number : 4788 },
+              { year : 2015, number : 4821 },
+              { year : 2016, number : 6550 },
+              { year : 2017, number : 6125 }
+          ]
+      }
+  ]);
+  db.courses.insertMany([
+      {
+          university : 'USAL',
+          name : 'Computer Science',
+          level : 'Excellent'
+      },
+      {
+          university : 'USAL',
+          name : 'Electronics',
+          level : 'Intermediate'
+      },
+      {
+          university : 'USAL',
+          name : 'Communication',
+          level : 'Excellent'
+      }
+  ]);
+#+end_src
+
+Las agregaciones en MongoDB se hacen a través de *PIPELINES*, esto tiene la siguiente forma:
+
+#+begin_src js
+  funcion_f(w).funcion_g(x).funcion_h(y).funcion_i(z)
+#+end_src
+
+Estos pipelines son idénticos a hacer esto:
+
+#+begin_src js
+  funcion_i(funcion_h(funcion_g(funcion_f(w,x,y,z))))
+#+end_src
+
+Con la diferencia que esto es mucho menos legible.
+
+Un pipeline primero debe ser definido:
+
+#+begin_src js
+  var pipeline = [
+      {"$match": {
+          "level": "Excellent",
+      }},
+
+      {"$sort": {
+          "name": -1,
+      }},
+
+      {"$limit": 1},
+
+      {"$unset": [
+          "_id",
+          "name",
+          "level",
+      ]},
+  ];
+#+end_src
+
+Si se fijan, estamos definiendo un arreglo de condiciones y operadores.
+
+Para ejecutar este pipeline:
+
+#+begin_src js
+  db.courses.aggregate(pipeline);
+#+end_src
+
+Y para que MongoDB nos expliquen el execution plan:
+
+#+begin_src js
+  db.courses.explain("executionStats").aggregate(pipeline);
+#+end_src
+
+El resultado esperado es:
+
+#+begin_src js
+  [ { university: 'USAL' } ]
+#+end_src
+
+NOTAS:
+
+1. Podemos acelerar el query con un índice. Qué campos incluirían en dicho índice?
+2. Estamos usando ~$unset~ en lugar de ~$project~, que es lo mismo que usar ~{"atributo":[1|0]}~.
+3. Oiga, pero esto podemos hacerlo con ~find~ solito!
+
+Si, de este modo:
+
+#+begin_src js
+  db.courses.find(
+      {"level": "Excellent"},
+      {"_id": 0, "name": 0, "level": 0},
+  ).sort(
+      {"name": -1}
+  ).limit(1);
+#+end_src
+
+Pero tenemos menos legibilidad y no podemos encadenar operaciones de agregación, como las que siguen.
+En general, un pipeline de agregación en MongoDB tiene la siguiente forma:
+
+
+#+DOWNLOADED: screenshot @ 2022-09-22 14:20:11
+[[file:images/20220922-142011_screenshot.png]]
+
+
+Es una generalización de una secuencia de funciones:
+
+1. ~$match~: filtrado de todos los documentos que nos interesan para el query (como el ~WHERE~ en SQL). Se puede conjuntar con ~$project~.
+2. ~$group~: agrega los renglones seleccionados previo a aplicar algun operador
+3. ~$sort~:  ordena los resultados de acuerdo a un criterio
+
+El input de la agregación puede ser 1 o más documentos en array.
+
+No hay límites en cuanto al num de elementos de cada tipo para el pipeline (les llamamos _stages_), es decir, podemos combinar cualquier número de operadores. *SIN EMBARGO* el límite por pipeline en cuanto a su memory footprint es de *100MB*.
+
+* Stage ~$match~
+
+El primer stage en los pipelines de agregación es similar al ~find()~ para filtrar documentos en los que estamos interesados:
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match : { country : 'Spain', city : 'Salamanca' } }
+  ])
+#+end_src
+
+Y al igual que el ~find()~, podemos hacer ~$project~:
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match:{country: 'Spain', city: 'Salamanca'} },
+      { $project:{_id : 0, country : 1, city : 1, name : 1} }
+  ])
+#+end_src
+
+* Stage ~$group~
+
+El ~group by~ de MongoDB y el corazón de operaciones como count, sum, avg, etc.
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match:{country: 'Spain', city: 'Salamanca'} },
+      { $project:{_id : 0, country : 1, city : 1, name : 1} },
+      { $group:{_id: "$name", conteo:{$sum:1}} }
+  ])
+#+end_src
+
+👀OJO!👀 En el ~$group~ hay algunos elementos de sintaxis *mandatorios*:
+
+1. el atributo de agrupación se debe llamar *~_id~*.
+   - Podemos renombrarlo agregando otro stage de ~$project~ así:
+   #+begin_src js
+     db.universities.aggregate([
+         { $match:{country: 'Spain', city: 'Salamanca'} },
+         { $project:{_id : 0, country : 1, city : 1, name : 1} },
+         { $group:{_id: "$name", conteo:{$sum:1}} },
+         { $project:{_id : 0, "uni" : "$_id"} }
+     ])
+   #+end_src
+2. el atributo por el cual vamos a agregar debe ir con la notación ~$~ como si se tratara de una variable (porque lo es) y entrecomillado.
+3. el atributo en el cual guardaremos el resultado de la función de agregación puede llamarse como nosotros deseemos
+4. ~{$sum:1}~ es similar al ~COUNT(*)~ de SQL en el sentido de que va sumando 1 por cada documento que encuentra de acuerdo al stage de ~$match~
+
+** Caso especial: agregación total (sin grupos)
+
+En caso de que deseemos hacer una agregación de todos los documentos, sin armar grupos:
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match:{country: 'Spain', city: 'Salamanca'} },
+      { $project:{_id : 0, country : 1, city : 1, name : 1} },
+      { $group: { _id: null, conteo: { $count:{} } } },
+      { $project: { _id: 0, conteo:1 } }
+  ])
+#+end_src
+
+Resultado:
+
+#+begin_src js
+  [ { conteo: 2 } ]
+#+end_src
+
+* Stage ~$out~
+
+Toma la ejecución de toda la salida del pipeline y lo guarda en otra colección.
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match:{country: 'Spain', city: 'Salamanca'} },
+      { $project:{ country : 1, city : 1, name : 1} },
+      { $group:{_id: "$name", conteo:{$sum:1}, fecha: Date()} },
+      { $project:{ _id : 0, "uni" : "$_id", conteo:1} },
+      { $out:"miranomas" }
+  ])
+#+end_src
+
+** Stage ~$merge~
+
+Este agrega a la colección que ya tiene documentos y anexa los resultados a la colección.
+
+En ~$out~, sobreescribe la colección.
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match:{country: 'Spain', city: 'Salamanca'} },
+      { $project:{ country : 1, city : 1, name : 1} },
+      { $group:{_id: "$name", conteo:{$sum:1}} },
+      { $project:{ _id : 0, "uni" : "$_id", conteo:1} },
+      { $merge:{into: "miranomas"} }
+  ])
+#+end_src
+
+* Stage ~$unwind~
+
+Si nuestros documentos tienen arrays, el stage ~$group~ no nos permite llegar a ellos para agregarlos.
+
+El stage ~$unwind~ nos permite un hack para darle la vuelta a esta limitante.
+
+Lo que hace es explotar el array de un documento, tomar cada uno de los N elementos, y clavárselos a N copias del atributo que lo contiene.
+
+En efecto, lo "desenrolla" 🤣
+
+Por ejemplo:
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match : { name : 'USAL' } }
+  ])
+#+end_src
+
+Esto obviamente nos regresa 1 documento:
+
+#+begin_src js
+  {
+      country : 'Spain',
+      city : 'Salamanca',
+      name : 'USAL',
+      location : {
+          type : 'Point',
+          coordinates : [ -5.6722512,17, 40.9607792 ]
+      },
+      students : [
+          { year : 2014, number : 24774 },
+          { year : 2015, number : 23166 },
+          { year : 2016, number : 21913 },
+          { year : 2017, number : 21715 }
+      ]
+  }
+#+end_src
+
+Pero si corremos la siguiente agregación:
+
+#+begin_src js
+  db.universities.aggregate([
+      { $match : { name : 'USAL' } },
+      { $unwind : '$students' }
+  ])
+#+end_src
+
+Entonces tenemos el siguiente resultado:
+
+#+begin_src js
+  {
+      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
+      "country" : "Spain",
+      "city" : "Salamanca",
+      "name" : "USAL",
+      "location" : {
+          "type" : "Point",
+          "coordinates" : [
+              -5.6722512,
+              17,
+              40.9607792
+          ]
+      },
+      "students" : {
+          "year" : 2014,
+          "number" : 24774
+      }
+  }
+  {
+      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
+      "country" : "Spain",
+      "city" : "Salamanca",
+      "name" : "USAL",
+      "location" : {
+          "type" : "Point",
+          "coordinates" : [
+              -5.6722512,
+              17,
+              40.9607792
+          ]
+      },
+      "students" : {
+          "year" : 2015,
+          "number" : 23166
+      }
+  }
+  {
+      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
+      "country" : "Spain",
+      "city" : "Salamanca",
+      "name" : "USAL",
+      "location" : {
+          "type" : "Point",
+          "coordinates" : [
+              -5.6722512,
+              17,
+              40.9607792
+          ]
+      },
+      "students" : {
+          "year" : 2016,
+          "number" : 21913
+      }
+  }
+  {
+      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
+      "country" : "Spain",
+      "city" : "Salamanca",
+      "name" : "USAL",
+      "location" : {
+          "type" : "Point",
+          "coordinates" : [
+              -5.6722512,
+              17,
+              40.9607792
+          ]
+      },
+      "students" : {
+          "year" : 2017,
+          "number" : 21715
+      }
+  }
+#+end_src
+
+👀OJO!👀 Fíjense en el ~_id~ que *ES EL MISMO* en todos los casos, esto es, es el mismo objeto ~university~ pero con el array ~students~ _descompuesto_ e insertado en copias de cada elemento.
+
+** Casos especiales
+
+1. ~$unwind~ de un array vacío no regresará nada
+2. ~$unwind~ de un atributo simple regresará el mismo _enclosing document_
+#+begin_src js
+  db.universities.aggregate([
+      { $match : { name : 'USAL' } },
+      { $unwind : '$city' }
+  ])
+#+end_src
+3. ~$unwind~ de un array de un diccionario que tiene un 2o o 3er array, solo va a "desenrollar" el diccionario que solicitamos en ese operador, por lo que los otros arrays estarán repetidos
+
+** Para qué sirve esto?
+
+Para hacer cosas como contar las universidades con registros de alumnos de 2017:
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind : '$students' },
+      { $project : { _id : 0, 'students.year' : 1, 'students.number' : 1 } },
+      { $match: {'students.year':2017}},
+      { $group:{_id: "$students.year", conteo:{$count: {}} }},
+  ])
+#+end_src
+
+O  sumar los registros de alumnos de 2017:
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind : '$students' },
+      { $project : { _id : 0, 'students.year' : 1, 'students.number' : 1 } },
+      { $match: {'students.year':2017}},
+      { $group:{_id: "$students.year", suma:{$sum: "$students.number"}} },
+  ])
+#+end_src
+
+O acumular los alumnos de cada año:
+
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind: '$students' },
+      { $project: { _id: 0, "name": 1, 'students.year': 1, 'students.number': 1 } },
+      { $group: { _id: "$students.year", totalAlumnos: { $sum: "$students.number" } } },
+      {$project:{_id:0,"year":"$_id",totalAlumnos:1}}
+  ])
+#+end_src
+
+O el promedio de alumnos de 2014 a 2017
+
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind: '$students' },
+      { $project: { _id: 0, "name": 1, 'students.year': 1, 'students.number': 1 } },
+      { $group: { _id: "$name", promedioAlumnos: { $avg: "$students.number" } } },
+      {$project:{_id:0,"uni":"$_id",promedioAlumnos:1}}
+  ])
+#+end_src
+
+O el promedio de alumnos de 2015 a 2017
+
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind: '$students' },
+      { $project: { _id: 0, "name": 1, 'students.year': 1, 'students.number': 1 } },
+      {$match: {"students.year":{$gte:2015}}},
+      { $group: { _id: "$name", promedioAlumnos: { $avg: "$students.number" } } },
+      {$project:{_id:0,"uni":"$_id",promedioAlumnos:1}}
+  ])
+#+end_src
+
+O Cuáles son los años con registros en las universidades
+
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind: '$students' },
+      { $project: { _id: 0, "name": 1, 'students.year': 1, 'students.number': 1 } },
+      {$match: {"students.year":{$gte:2015}}},
+      { $group: { _id: "$name", agnos: { $addToSet: "$students.year" } } },
+      {$project:{_id:0,"uni":"$_id",agnos:1}}
+  ])
+#+end_src
+
+Agregar un objeto completo a Arrays .
+#+begin_src js
+  db.universities.aggregate([
+      { $unwind: '$students' },
+      { $project: { _id: 0, "name": 1, 'students.year': 1, 'students.number': 1 } },
+      {$match: {"students.year":{$gte:2015}}},
+      { $group: { _id: "$name", agnos: { $mergeObjects: "$students" } } },
+      {$project:{_id:0,"uni":"$_id",agnos:1}}
+  ])
+#+end_src
+
+O cualquiera de estas funciones:
+
+|Función|Descrip|
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| $addToSet     | Después de agrupar, agrega elementos individuales a un array|
+| $avg          | Promedio|
+| $count        | Conteo (igual a ~{$sum:1}~|
+| $first        | Regresa el 1er documento o diccionario de cada grupo. ⚠️No confundir con el operador ~$first~ aplicable a arrays. Este operador no se ocupa del orden, eso se garantiza desde el stage ~$sort~ del pipeline |
+| $last         | Regresa el último documento o diccionario de cada grupo. Mismas reglas y observaciones que ~$first~|
+| $max          | Regresa el máximo de cada grupo|
+| $mergeObjects | Después de armar los grupos, combinar los objetos/diccionarios/documentos que correspondan al grupo en uno solo|
+| $min          | Regresa el mínimo de cada grupo|
+| $stdDevPop    | Regresa la [desviación estándar de la población](https://statistics.laerd.com/statistical-guides/measures-of-spread-standard-deviation.php) (entre _n_) de cada grupo|
+| $stdDevSamp   | Regresa la [desviación estándar de la muestra](https://statistics.laerd.com/statistical-guides/measures-of-spread-standard-deviation.php) (entre _n-1_) de cada grupo|
+| $sum          | Suma acumulativa de cada grupo|
+
+** Ejemplo ~$addToSet~
+
+Vamos a crear la sig colección en la BD que sea:
+
+#+begin_src js
+  db.sales.insertMany([
+      { "_id" : 1, "item" : "abc", "price" : 10, "quantity" : 2, "date" : ISODate("2014-01-01T08:00:00Z") },
+      { "_id" : 2, "item" : "jkl", "price" : 20, "quantity" : 1, "date" : ISODate("2014-02-03T09:00:00Z") },
+      { "_id" : 3, "item" : "xyz", "price" : 5, "quantity" : 5, "date" : ISODate("2014-02-03T09:05:00Z") },
+      { "_id" : 4, "item" : "abc", "price" : 10, "quantity" : 10, "date" : ISODate("2014-02-15T08:00:00Z") },
+      { "_id" : 5, "item" : "xyz", "price" : 5, "quantity" : 10, "date" : ISODate("2014-02-15T09:12:00Z") }
+  ]);
+#+end_src
+
+Vemos que solo hay 2 fechas. Si queremos agrupar por esa fecha y aglutinar los ~item~ en un solo array, podemos hacer:
+
+#+begin_src js
+  db.sales.aggregate([
+      {$group:
+       {_id: { day: { $dayOfYear: "$date"}, year: { $year: "$date" } }, itemsSold: { $addToSet: "$item" } }
+      }
+  ]);
+#+end_src
+
+👀OJO!👀 Estamos utilizando 2 operadores para objetos ~ISODate~:
+
+1. ~$dayOfYear~: extrae de un objeto ~ISODate~ un dato numérico entre 1 y 365 (o 366 si es año bisiesto) representando el día del año.
+2. ~$year~: extrae de un objeto ~ISODate~ el año en numérico.
+
+A continuación los operadores más comunes sobre ~ISODate~:
+
+| Función | Descripción y Ejemplo|
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| $dateAdd        | ~{ $dateAdd: {startDate: ISODate("2020-10-31T12:10:05Z"), unit: "month", amount: 1} }~ - Agrega ~amount~ al campo ~unit~ de la fecha ~startDate~                                                                                                                            |
+| $dateDiff       | ~{ $dateDiff: { startDate: ISODate("2014-01-01T08:00:00Z"), endDate: ISODate("2014-02-03T09:00:00Z"), unit: "day"} }~ - Regresa la diferencia en ~unit~ entre ~startDate~ y ~endDate~  |
+| $dateFromString | ~{ $dateFromString: {dateString: "15-06-2018", format: "%d-%m-%Y"} }~ - Parsea el string ~dateString~ representando una fecha en formato ~format~ para convertirlo en un objeto ~ISODate~ que contenga esa misma fecha.                                                                                                                            |
+| $dateSubtract   | ~{ $dateSubtract: {startDate: ISODate("2020-10-31T12:10:05Z"), unit: "month", amount: 1} }~ - Susbtrae ~amount~ al campo ~unit~ de la fecha ~startDate~                                                                                                                     |
+| $dateToParts    | ~$dateToParts: { date: ISODate("2017-01-01T01:29:09.123Z") }~ - Descompone el ~date~ en sus partes. Retorna ~"date" : {"year" : 2017, "month" : 1, "day" : 1, "hour" : 1, "minute" : 29, "second" : 9, "millisecond" : 123}~                                                                                                          |
+| $dateToString   | ~{ $dateToString: { format: "%Y-%m-%d %H:%M:%S", date: ISODate("2014-01-01T08:15:39.736Z") } }~ - Convierte un ~ISODate~ en un string con una fecha formateada por ~format~. Retorna ~"2014-01-01 03:15:39"~. Ver [opciones de formato](https://docs.mongodb.com/manual/reference/operator/aggregation/dateToString/).                                                                                                                           |
+| $dayOfMonth     | Los siguientes operadores tienen la sintaxis ~{ $[operador]: [objeto ISODate] }~. Regresa un numérico entre 1 y 31 del objeto ~ISODate~.                                                                                                    |
+| $dayOfWeek      | Regresa un numérico entre 1 (Domingo) y 7 (Sábado) del objeto ~ISODate~. |
+| $dayOfYear      | Regresa un numérico entre 1 y 366 (bisiesto) del objeto ~ISODate~. |
+| $hour           | Regresa un numérico entre 0 y 23 del objeto ~ISODate~. |
+| $isoDayOfWeek   | Regresa un numérico entre 1 (Lunes) y 7 (Domingo) del objeto ~ISODate~. No confundir con ~$dayOfWeek~ |
+| $isoWeek        | Regresa un numérico entre 1 y 53 del objeto ~ISODate~.  |
+| $millisecond    | Regresa un numérico entre 0 y 999 del objeto ~ISODate~. |
+| $minute         | Reegresa un numérico entre 0 y 59 del objeto ~ISODate~. |
+| $month          | Regresa un numérico entre 1 (Enero) y 12 (Diciembre) del objeto ~ISODate~. |
+| $second         | Regresa un numérico entre 0 y 60 (cuando es _leap second_) del objeto ~ISODate~. |
+| $year           | Regresa el valor del año del objeto ~ISODate~|
+
+Posterior a armar los grupos con esas 2 únicas fechas, cada ~item~ será agregado a un array:
+
+#+begin_src js
+  { "_id" : { "day" : 46, "year" : 2014 }, "itemsSold" : [ "xyz", "abc" ] }
+  { "_id" : { "day" : 34, "year" : 2014 }, "itemsSold" : [ "xyz", "jkl" ] }
+  { "_id" : { "day" : 1, "year" : 2014 }, "itemsSold" : [ "abc" ] }
+#+end_src
+
+
+** Ejemplo ~$mergeObjects~
+
+Crearemos la sig colección en cualquier BD:
+
+#+begin_src js
+  db.sales.insert( [
+      { _id: 1, year: 2017, item: "A", quantity: { "2017Q1": 500, "2017Q2": 500 } },
+      { _id: 2, year: 2016, item: "A", quantity: { "2016Q1": 400, "2016Q2": 300, "2016Q3": 0, "2016Q4": 0 } } ,
+      { _id: 3, year: 2017, item: "B", quantity: { "2017Q1": 300 } },
+      { _id: 4, year: 2016, item: "B", quantity: { "2016Q3": 100, "2016Q4": 250 } }
+  ])
+#+end_src
+
+Vamos a agrupar por ~item~ y vamos a crear un diccionario con todos los ~quantity~ en un atributo llamado ~mergedSales~:
+
+#+begin_src js
+  db.sales.aggregate( [
+      { $group: { _id: "$item", mergedSales: { $mergeObjects: "$quantity" } } }
+  ])
+#+end_src
+
+El resultado debe ser:
+
+#+begin_src js
+  { "_id" : "B", "mergedSales" : { "2017Q1" : 300, "2016Q3" : 100, "2016Q4" : 250 } }
+  { "_id" : "A", "mergedSales" : { "2017Q1" : 500, "2017Q2" : 500, "2016Q1" : 400, "2016Q2" : 300, "2016Q3" : 0, "2016Q4" : 0 } }
+#+end_src
+
+* Stages ~$sort~ y ~$limit~
+
+El sort y el limit puede usarse como stage de un pipeline de agregación, o puede usarse _standalone_ como lo hemos hecho antes para ordenar resulsets individuales.
+
+* Stage ~$addFields~
+#+begin_src sh
+cat ../data/restaurants.json | docker exec -i mongo mongoimport --db=reviews --collection=restaurants
+
+#+end_src
+Crea campos nuevos basados en las agregaciones, como una suma concentrada final, o un promedio concentrado final.
+
+⚠️No confundir con el ~$group~, el ~$addFields~ NO AGREGA NI AGRUPA.⚠️
+
+Regresemos a nuestra BD de reviews de restaurantes con ~use reviews~
+
+La estructura de cada review es:
+#+begin_src js
+  use reviews
+  db.restaurants.findOne()
+#+end_src
+Cómo podemos agregar un atributo a cada restaurante para tener su score total agregado de todos sus reviews y su promedio?
+
+#+begin_src js
+  db.restaurants.aggregate([
+      {$project:{"grades.score":1, "name":1}},
+      {$unwind:"$grades"},
+      {$group:{_id:"$name", "gradeArray":{$push:"$grades.score"}}},
+      {$project:{"name":"$_id",_id:0,"gradeArray":1}}, {$addFields:{"totalScore":{$sum:"$gradeArray"},"avgScore":{$avg:"$gradeArray"}}}
+  ])
+#+end_src
+
+Desmenucemos este query para entenderlo:
+
+1. "desenrollo" el array ~grades~ y le clavo cada elemento a una copia del _enclosing object_.
+2. quito toda la paja y me quedo con los scores y el nombre del restaurante
+3. agrupo por nombre de restaurante - esto en SQL es una mala práctica, PERO en MongoDB y en general en bases de datos de documentos, se vale. Esto nos sirve para poder ejecutar el operador ~$push~, que clava un array a un objeto. En esta línea lo que estamos haciendo es efectivamente *CONVERTIR* el diccionario que tiene los scores en un arreglo normalito.
+4. Ya con el arreglo, renombramos el ~_id~ del grupo
+5. Y sumamos horizontalmente los scores del array, así como su promedio.
+
+* Stage ~$sortByCount~
+
+Es un operador que funge como si tuviéramos:
+
+#+begin_src js
+  db.collection.aggregate([
+      { $group: { _id: <expression>, count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+  ])
+#+end_src
+
+Insertemos esta base de datos de obras de arte:
+
+#+begin_src js
+  db.artwork.insertMany([
+      { "_id" : 1, "title" : "The Pillars of Society", "artist" : "Grosz", "year" : 1926, "tags" : [ "painting", "satire", "Expressionism", "caricature" ] },
+      { "_id" : 2, "title" : "Melancholy III", "artist" : "Munch", "year" : 1902, "tags" : [ "woodcut", "Expressionism" ] },
+      { "_id" : 3, "title" : "Dancer", "artist" : "Miro", "year" : 1925, "tags" : [ "oil", "Surrealism", "painting" ] },
+      { "_id" : 4, "title" : "The Great Wave off Kanagawa", "artist" : "Hokusai", "tags" : [ "woodblock", "ukiyo-e" ] },
+      { "_id" : 5, "title" : "The Persistence of Memory", "artist" : "Dali", "year" : 1931, "tags" : [ "Surrealism", "painting", "oil" ] },
+      { "_id" : 6, "title" : "Composition VII", "artist" : "Kandinsky", "year" : 1913, "tags" : [ "oil", "painting", "abstract" ] },
+      { "_id" : 7, "title" : "The Scream", "artist" : "Munch", "year" : 1893, "tags" : [ "Expressionism", "painting", "oil" ] },
+      { "_id" : 8, "title" : "Blue Flower", "artist" : "O'Keefe", "year" : 1918, "tags" : [ "abstract", "painting" ] },
+  ])
+#+end_src
+
+Si ejecutamos la siguiente agregación:
+
+#+begin_src js
+  db.artwork.aggregate([
+      { $unwind: "$tags" },
+      { $sortByCount: "$tags" }
+  ] )
+#+end_src
+
+Tendremos la salida:
+
+#+begin_src js
+  { "_id" : "painting", "count" : 6 }
+  { "_id" : "oil", "count" : 4 }
+  { "_id" : "Expressionism", "count" : 3 }
+  { "_id" : "Surrealism", "count" : 2 }
+  { "_id" : "abstract", "count" : 2 }
+  { "_id" : "woodblock", "count" : 1 }
+  { "_id" : "woodcut", "count" : 1 }
+  { "_id" : "ukiyo-e", "count" : 1 }
+  { "_id" : "satire", "count" : 1 }
+  { "_id" : "caricature", "count" : 1 }
+#+end_src
+
+Esto es, cuenta los elementos comunes y los ordena por el num de ocurrencias.
+
+* Stage ~$lookup~
+
+Este stage nos permite hacer un *join* entre la colección sobre la que estamos operando y una colección de *lookup*.
+
+Se recomienda que ambas colecciones estén *en la misma BD*.
+
+Al igual que las operaciones join en SQL, necesitamos que ambas colecciones tengan al menos 1 atributo idéntico cada uno *los cuales podamos asociar con una condición de igualdad*. Recordemos que en MongoDB los ~ObjectID~ no siguen (ni tienen por qué seguir) las mejores prácticas de identificadores que en SQL.
+
+Para este ejercicio vamos a importar 2 colecciones a la BD ~lookup~:
+
+#+begin_src js
+  use lookup
+
+  db.orders.insert([
+      { "_id" : 1, "item" : "almonds", "price" : 12, "quantity" : 2 },
+      { "_id" : 2, "item" : "pecans", "price" : 20, "quantity" : 1 },
+      { "_id" : 3  }
+  ])
+
+  db.inventory.insert([
+      { "_id" : 1, "sku" : "almonds", "description": "product 1", "instock" : 120 },
+      { "_id" : 2, "sku" : "bread", "description": "product 2", "instock" : 80 },
+      { "_id" : 3, "sku" : "cashews", "description": "product 3", "instock" : 60 },
+      { "_id" : 4, "sku" : "pecans", "description": "product 4", "instock" : 70 },
+      { "_id" : 5, "sku": null, "description": "Incomplete" },
+      { "_id" : 6 }
+  ])
+#+end_src
+
+Y luego corremos el operador ~$lookup~ como parte de un pipeline de la función ~.aggregate()~
+
+#+begin_src js
+  db.orders.aggregate([
+      {
+          $lookup:
+          {
+              from: "inventory",
+              localField: "item",
+              foreignField: "sku",
+              as: "inventory_docs"
+          }
+      }
+  ])
+#+end_src
+
+El resultado es:
+
+#+begin_src js
+  {
+      "_id" : 1,
+      "item" : "almonds",
+      "price" : 12,
+      "quantity" : 2,
+      "inventory_docs" : [
+          { "_id" : 1, "sku" : "almonds", "description" : "product 1", "instock" : 120 }
+      ]
+  }
+  {
+      "_id" : 2,
+      "item" : "pecans",
+      "price" : 20,
+      "quantity" : 1,
+      "inventory_docs" : [
+          { "_id" : 4, "sku" : "pecans", "description" : "product 4", "instock" : 70 }
+      ]
+  }
+  {
+      "_id" : 3,
+      "inventory_docs" : [
+          { "_id" : 5, "sku" : null, "description" : "Incomplete" },
+          { "_id" : 6 }
+      ]
+  }
+#+end_src
+
+Posterior a esto podríamos continuar el pipeline, por ejemplo, para contar los ~inventory_docs~ por diccionario:
+
+#+begin_src js
+  db.orders.aggregate([
+      {
+          $lookup:
+          {
+              from: "inventory",
+              localField: "item",
+              foreignField: "sku",
+              as: "inventory_docs"
+          }
+      },
+      {$unwind:"$inventory_docs"},
+      {$group: {_id:"$_id", numDocs:{$count:{}}}}
+  ])
+#+end_src
+
+* Queries analíticos avanzados
+
+1. Cuál es el promedio de ~score~ por ~type~ de evaluación y por ~class_id~ en la BD ~sample_training~ en la colección ~grades~?
+
+Para esto debemos descargar [[https://github.com/Skalas/nosql2022/raw/main/datasets/grades.zip][esta BD de calificaciones]] e insertarla con ~mongoimport~:
+
+#+begin_src shell
+  cat ../data/grades.json | docker exec -i mongo mongoimport --db=sample_training --collection=grades
+  docker exec -it mongo mongosh
+#+end_src
+
+Primero debemos enterarnos de qué va la BD. Vamos a sacar los primeros 3 registros para ver de qué tratan:
+
+#+begin_src js
+  use sample_training
+  db.grades.find().limit(3)
+
+#+end_src
+
+Parece que son calificaciones de un alumno, de una clase, para diferentes mecanismos de evaluación: examen, quiz, y tareas.
+
+Qué tipo de relación hay entre ~student_id~ y ~class_id~? Cuál es el punto de vista de esta estructura? "Una clase tiene N alumnos?", o "un alumno tiene N clases?".
+
+Primero, veamos cuantos registros tenemos:
+
+#+begin_src js
+  db.grades.find().count()
+#+end_src
+
+Si la perspectiva está anclada en ~class_id~, entonces deberíamos tener 100,000 clases, o 100,000 estudiantes si la perspectiva está en ~student_id~.
+
+#+begin_src js
+  db.grades.distinct("class_id")
+
+  [
+      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+      36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+      60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
+      72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+      84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+      96, 97, 98, 99,
+      ... 401 more items
+  ]
+#+end_src
+
+De acuerdo a esto, el universo de clases es mucho menor, por lo que probablemente esta colección esté armada desde la perspectiva del estudiante.
+
+#+begin_src js
+  db.grades.distinct("student_id")
+
+  [
+      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+      36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+      60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
+      72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+      84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+      96, 97, 98, 99,
+      ... 9900 more items
+  ]
+#+end_src
+
+Ahora vamos a tratar de armar el query para dar respuesta a la pregunta inicial:
+
+#+begin_src js
+  db.grades.aggregate([
+      {$unwind:"$scores"},
+      {$project:{"student_id":0}},
+      {$group:{
+          _id:{
+              "clase":"$class_id",
+              "eval":"$scores.type"
+          },
+          "promedio":
+          {$avg:"$scores.score"}
+      }},
+      {$sort:{"_id.clase":1,"_id.eval":1}}
+  ])
+
+#+end_src
+
+Nuestro resultado es:
+
+#+begin_src js
+  [
+      { _id: { clase: 0, eval: 'exam' }, promedio: 46.224870203904395 },
+      { _id: { clase: 0, eval: 'homework' }, promedio: 49.6592370300883 },
+      { _id: { clase: 0, eval: 'quiz' }, promedio: 49.38124259163944 },
+      { _id: { clase: 1, eval: 'exam' }, promedio: 50.78357850094616 },
+      { _id: { clase: 1, eval: 'homework' }, promedio: 49.18339520790678 },
+      { _id: { clase: 1, eval: 'quiz' }, promedio: 51.68365158823541 },
+      { _id: { clase: 2, eval: 'exam' }, promedio: 51.212269415215715 },
+      { _id: { clase: 2, eval: 'homework' }, promedio: 48.635517471345494 },
+      { _id: { clase: 2, eval: 'quiz' }, promedio: 49.22183768413837 },
+      { _id: { clase: 3, eval: 'exam' }, promedio: 49.24088016851434 },
+      { _id: { clase: 3, eval: 'homework' }, promedio: 49.32958980280401 },
+      { _id: { clase: 3, eval: 'quiz' }, promedio: 49.70705542324686 },
+      { _id: { clase: 4, eval: 'exam' }, promedio: 48.45214274611575 },
+      { _id: { clase: 4, eval: 'homework' }, promedio: 51.336198599567986 },
+      { _id: { clase: 4, eval: 'quiz' }, promedio: 52.186677392814204 },
+      { _id: { clase: 5, eval: 'exam' }, promedio: 51.91626171544547 },
+      { _id: { clase: 5, eval: 'homework' }, promedio: 49.71133512774075 },
+      { _id: { clase: 5, eval: 'quiz' }, promedio: 48.17571458478485 },
+      { _id: { clase: 6, eval: 'exam' }, promedio: 54.20236080762028 },
+      { _id: { clase: 6, eval: 'homework' }, promedio: 49.441178234623834 },
+      ...,
+      ...,
+      ...,
+  ]
+#+end_src

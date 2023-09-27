@@ -1,0 +1,54 @@
+
+#+TITLE: API HTTP
+#+AUTHOR: Prof. Miguel Angel Escalante Serrato
+#+EMAIL:  miguel.escalante@itam.mx
+#+DATE: 06-oct-2022
+
+* Operaciones básicas
+
+API: Interfaz de programación de aplicaciones, es un conjunto de definiciones y protocolos para interactuar con software en las aplicaciones. Nos ayudan a:
+- Interactuar con partes internas de aplicaciones
+- Interactuar con componentes externos a nuestras aplicaciones
+- Interactuar con páginas web de manera programática
+
+Las APIs son programitas que corren en servidores y que generalmente ejecutan las 4 operaciones básicas sobre BD:
+
+1. CREATE
+2. RETRIEVE
+3. UPDATE
+4. DELETE
+
+En conjunto estas operaciones las llamamos CRUD.
+
+* HTTP protocol
+
+En el 2000 a Roy Felding se le ocurrió que estos "verbos" se parecían un buen a los "verbos" del protocolo HTTP:
+
+1. CREATE
+2. GET
+3. POST
+4. DELETE
+
+Y desarrolló un protocolo encima de HTTP para poder desarrollar servicios web que "hablaran HTTP de forma nativa".
+
+Y como suele pasar, un chico de licenciatura le puso en la torre a DECADAS de estándares y desarrollos empresariales, de revisiones, estándares, working groups y otras formas de no hacer las cosas en la búsqueda de INTEROPERABILIDAD DE SISTEMAS.
+
+* Cómo funciona CRUD?
+
+
+#+DOWNLOADED: screenshot @ 2022-10-05 22:26:54
+[[file:images/20221005-222654_screenshot.png]]
+
+* Cómo funcionan los verbos HTTP?
+Y usando los verbos HTTP así:
+
+#+DOWNLOADED: screenshot @ 2022-10-05 22:27:07
+[[file:images/20221005-222707_screenshot.png]]
+
+* Vamos a conectarnos a una API!
+
+El objetivo es hacer que puedan descargar los datos de alguna api pública en su mongodb.
+
+** Ejercicio del resto de la clase:
+
+Conectarse a la API : https://pokeapi.co/
