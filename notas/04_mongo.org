@@ -466,6 +466,7 @@ Vamos a agrupar por ~item~ y vamos a crear un diccionario con todos los ~quantit
 El sort y el limit puede usarse como stage de un pipeline de agregación, o puede usarse _standalone_ como lo hemos hecho antes para ordenar resulsets individuales.
 
 * Stage ~$addFields~
+
 #+begin_src sh
 cat ../data/restaurants.json | docker exec -i mongo mongoimport --db=reviews --collection=restaurants
 
@@ -488,7 +489,7 @@ Cómo podemos agregar un atributo a cada restaurante para tener su score total a
       {$project:{"grades.score":1, "name":1}},
       {$unwind:"$grades"},
       {$group:{_id:"$name", "gradeArray":{$push:"$grades.score"}}},
-      {$project:{"name":"$_id",_id:0,"gradeArray":1}}, {$addFields:{"totalScore":{$sum:"$gradeArray"},"avgScore":{$avg:"$gradeArray"}}}
+      {$project:{"name":"$_id",_id:0,"gradeArray":1}},  {$addFields:{"totalScore":{$sum:"$gradeArray"},"avgScore":{$avg:"$gradeArray"}}}
   ])
 #+end_src
 
