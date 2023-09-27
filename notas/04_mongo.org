@@ -116,11 +116,6 @@ Y para que MongoDB nos expliquen el execution plan:
   db.courses.explain("executionStats").aggregate(pipeline);
 #+end_src
 
-El resultado esperado es:
-
-#+begin_src js
-  [ { university: 'USAL' } ]
-#+end_src
 
 NOTAS:
 
@@ -217,12 +212,6 @@ En caso de que deseemos hacer una agregación de todos los documentos, sin armar
   ])
 #+end_src
 
-Resultado:
-
-#+begin_src js
-  [ { conteo: 2 } ]
-#+end_src
-
 * Stage ~$out~
 
 Toma la ejecución de toda la salida del pipeline y lo guarda en otra colección.
@@ -231,7 +220,7 @@ Toma la ejecución de toda la salida del pipeline y lo guarda en otra colección
   db.universities.aggregate([
       { $match:{country: 'Spain', city: 'Salamanca'} },
       { $project:{ country : 1, city : 1, name : 1} },
-      { $group:{_id: "$name", conteo:{$sum:1}, fecha: Date()} },
+      { $group:{_id: "$name", conteo:{$sum:1}} },
       { $project:{ _id : 0, "uni" : "$_id", conteo:1} },
       { $out:"miranomas" }
   ])
@@ -271,25 +260,7 @@ Por ejemplo:
   ])
 #+end_src
 
-Esto obviamente nos regresa 1 documento:
-
-#+begin_src js
-  {
-      country : 'Spain',
-      city : 'Salamanca',
-      name : 'USAL',
-      location : {
-          type : 'Point',
-          coordinates : [ -5.6722512,17, 40.9607792 ]
-      },
-      students : [
-          { year : 2014, number : 24774 },
-          { year : 2015, number : 23166 },
-          { year : 2016, number : 21913 },
-          { year : 2017, number : 21715 }
-      ]
-  }
-#+end_src
+Esto obviamente nos regresa 1 documento.
 
 Pero si corremos la siguiente agregación:
 
@@ -300,82 +271,6 @@ Pero si corremos la siguiente agregación:
   ])
 #+end_src
 
-Entonces tenemos el siguiente resultado:
-
-#+begin_src js
-  {
-      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
-      "country" : "Spain",
-      "city" : "Salamanca",
-      "name" : "USAL",
-      "location" : {
-          "type" : "Point",
-          "coordinates" : [
-              -5.6722512,
-              17,
-              40.9607792
-          ]
-      },
-      "students" : {
-          "year" : 2014,
-          "number" : 24774
-      }
-  }
-  {
-      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
-      "country" : "Spain",
-      "city" : "Salamanca",
-      "name" : "USAL",
-      "location" : {
-          "type" : "Point",
-          "coordinates" : [
-              -5.6722512,
-              17,
-              40.9607792
-          ]
-      },
-      "students" : {
-          "year" : 2015,
-          "number" : 23166
-      }
-  }
-  {
-      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
-      "country" : "Spain",
-      "city" : "Salamanca",
-      "name" : "USAL",
-      "location" : {
-          "type" : "Point",
-          "coordinates" : [
-              -5.6722512,
-              17,
-              40.9607792
-          ]
-      },
-      "students" : {
-          "year" : 2016,
-          "number" : 21913
-      }
-  }
-  {
-      "_id" : ObjectId("5b7d9d9efbc9884f689cdba9"),
-      "country" : "Spain",
-      "city" : "Salamanca",
-      "name" : "USAL",
-      "location" : {
-          "type" : "Point",
-          "coordinates" : [
-              -5.6722512,
-              17,
-              40.9607792
-          ]
-      },
-      "students" : {
-          "year" : 2017,
-          "number" : 21715
-      }
-  }
-#+end_src
 
 👀OJO!👀 Fíjense en el ~_id~ que *ES EL MISMO* en todos los casos, esto es, es el mismo objeto ~university~ pero con el array ~students~ _descompuesto_ e insertado en copias de cada elemento.
 
@@ -434,6 +329,8 @@ O el promedio de alumnos de 2014 a 2017
       {$project:{_id:0,"uni":"$_id",promedioAlumnos:1}}
   ])
 #+end_src
+
+#+RESULTS:
 
 O el promedio de alumnos de 2015 a 2017
 
@@ -537,14 +434,7 @@ A continuación los operadores más comunes sobre ~ISODate~:
 | $second         | Regresa un numérico entre 0 y 60 (cuando es _leap second_) del objeto ~ISODate~. |
 | $year           | Regresa el valor del año del objeto ~ISODate~|
 
-Posterior a armar los grupos con esas 2 únicas fechas, cada ~item~ será agregado a un array:
-
-#+begin_src js
-  { "_id" : { "day" : 46, "year" : 2014 }, "itemsSold" : [ "xyz", "abc" ] }
-  { "_id" : { "day" : 34, "year" : 2014 }, "itemsSold" : [ "xyz", "jkl" ] }
-  { "_id" : { "day" : 1, "year" : 2014 }, "itemsSold" : [ "abc" ] }
-#+end_src
-
+Posterior a armar los grupos con esas 2 únicas fechas, cada ~item~ será agregado a un array.
 
 ** Ejemplo ~$mergeObjects~
 
@@ -565,14 +455,11 @@ Vamos a agrupar por ~item~ y vamos a crear un diccionario con todos los ~quantit
   db.sales.aggregate( [
       { $group: { _id: "$item", mergedSales: { $mergeObjects: "$quantity" } } }
   ])
+    db.sales.aggregate( [
+      { $group: { _id: {item:"$item", year:"$year"}, mergedSales: { $mergeObjects: "$quantity" } } }
+  ])
 #+end_src
 
-El resultado debe ser:
-
-#+begin_src js
-  { "_id" : "B", "mergedSales" : { "2017Q1" : 300, "2016Q3" : 100, "2016Q4" : 250 } }
-  { "_id" : "A", "mergedSales" : { "2017Q1" : 500, "2017Q2" : 500, "2016Q1" : 400, "2016Q2" : 300, "2016Q3" : 0, "2016Q4" : 0 } }
-#+end_src
 
 * Stages ~$sort~ y ~$limit~
 
