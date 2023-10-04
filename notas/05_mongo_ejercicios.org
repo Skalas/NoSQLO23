@@ -63,19 +63,13 @@ Vamos a responder las siguientes preguntas:
 
    #+end_src
 6. Escribe una función find() para mostrar los primeros 5 restaurantes que se encuentran en el condado del Bronx.
-
    #+begin_src js
 
    #+end_src
-
-
 7. Escribe una función find() para mostrar los siguientes 5 restaurantes después de omitir los primeros 5 que se encuentran en el condado del Bronx.
-
    #+begin_src js
 
    #+end_src
-
-
 8. Escribe una función find() para encontrar los restaurantes que obtuvieron una puntuación de más de 90.
 
    #+begin_src js
