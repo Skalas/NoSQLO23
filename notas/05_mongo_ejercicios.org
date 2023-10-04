@@ -71,37 +71,22 @@ Vamos a responder las siguientes preguntas:
 
    #+end_src
 8. Escribe una función find() para encontrar los restaurantes que obtuvieron una puntuación de más de 90.
-
    #+begin_src js
 
    #+end_src
-
-
 9. Escribe una función find() para encontrar los restaurantes que obtuvieron una puntuación, más de 80 pero menos de 100.
-
-
-
    #+begin_src js
 
    #+end_src
-
-
-10. Escribe una función find() para encontrar los restaurantes que se ubican en un valor de latitud menor que -95.754168.
-
-Suponiendo que el atributo tipo array ~coord~ tiene la latitud en el índice 0:
-
+10. Escribe una función find() para encontrar los restaurantes que se ubican en un valor de latitud menor que -95.754168. Suponiendo que el atributo tipo array ~coord~ tiene la latitud en el índice 0:
    #+begin_src js
 
    #+end_src
-
-
 11. Escribe una función find() para encontrar los restaurantes que no preparan ningún tipo de cocina de 'estadounidense' y su puntuación de calificación es superior a 70 y latitud inferior a -65.754168.
-
    #+begin_src js
 
    #+end_src
 12. Escribe una función find() para encontrar los restaurantes que no preparan ninguna cocina del continente americano y lograron una puntuación superior a 70 y se ubicaron en la longitud inferior a -65.754168.
-
    #+begin_src js
 
    #+end_src
@@ -158,11 +143,13 @@ Suponiendo que el atributo tipo array ~coord~ tiene la latitud en el índice 0:
 
     #+end_src
 26. Escribe una función find() para organizar el nombre de los restaurantes en orden descendente junto con todas las columnas.
+    #+begin_src js
 
+    #+end_src
+    27. Escribe una función find() para organizar el nombre de la cocina en orden ascendente y para ese mismo distrito de cocina debe estar en orden descendente.
+        #+begin_src js
 
-27. Escribe una función find() para organizar el nombre de la cocina en orden ascendente y para ese mismo distrito de cocina debe estar en orden descendente.
-
-
+        #+end_src
 28. Escribe una función find() para saber si todas las direcciones contienen la calle o no.
 
 
