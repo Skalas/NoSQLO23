@@ -460,7 +460,6 @@ Vamos a agrupar por ~item~ y vamos a crear un diccionario con todos los ~quantit
   ])
 #+end_src
 
-
 * Stages ~$sort~ y ~$limit~
 
 El sort y el limit puede usarse como stage de un pipeline de agregación, o puede usarse _standalone_ como lo hemos hecho antes para ordenar resulsets individuales.
