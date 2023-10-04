@@ -146,25 +146,32 @@ Vamos a responder las siguientes preguntas:
     #+begin_src js
 
     #+end_src
-    27. Escribe una función find() para organizar el nombre de la cocina en orden ascendente y para ese mismo distrito de cocina debe estar en orden descendente.
-        #+begin_src js
+27. Escribe una función find() para organizar el nombre de la cocina en orden ascendente y para ese mismo distrito de cocina debe estar en orden descendente.
+    #+begin_src js
 
-        #+end_src
+    #+end_src
 28. Escribe una función find() para saber si todas las direcciones contienen la calle o no.
+    #+begin_src js
 
-
+    #+end_src
 29. Escribe una función find() que seleccionará todos los documentos de la colección de restaurantes donde el valor del campo coord es Double.
+    #+begin_src js
 
-
+    #+end_src
 30. Escribe una función find() que seleccionará el ID del restaurante, el nombre y las calificaciones para esos restaurantes que devuelve 0 como resto después de dividir la puntuación por 7.
+    #+begin_src js
 
-
+    #+end_src
 31. Escribe una función find() para encontrar el nombre del restaurante, el municipio, la longitud y la actitud y la cocina de aquellos restaurantes que contienen "mon" como tres letras en algún lugar de su nombre.
+    #+begin_src js
 
-
+    #+end_src
 32. Escribe una función find() para encontrar el nombre del restaurante, el distrito, la longitud y la latitud y la cocina de aquellos restaurantes que contienen 'Mad' como las primeras tres letras de su nombre.
+    #+begin_src js
 
+    #+end_src
 * PT 2.
+
 Usando la colección de ~tweets~ en la BD ~trainingsessions~ vamos a responder las siguientes preguntas, ayudándonos de las siguientes colecciones adicionales.
 
    #+begin_src js
@@ -436,17 +443,26 @@ Usando la colección de ~tweets~ en la BD ~trainingsessions~ vamos a responder l
    #+end_src
 
 1. Qué idiomas base son los que más tuitean con hashtags? Cuál con URLs? Y con @?
+   #+begin_src js
 
-2. Qué idioma base es el que más hashtags usa en sus tuits?
+   #+end_src
+2. Qué idioma base es el que más hashtags usa en sus tuits? Planteamiento: "sum del size de los arrays previo filtrado"
+   #+begin_src js
 
-Planteamiento: "sum del size de los arrays previo filtrado"
-
+   #+end_src
 3. Cómo podemos saber si los tuiteros hispanohablantes interactúan más en las noches?
+   #+begin_src js
 
+   #+end_src
 4. Cómo podemos saber de dónde son los tuiteros que más tiempo tienen en la plataforma?
+   #+begin_src js
 
-
+   #+end_src
 5. En intervalos de 7:00:00pm a 6:59:59am y de 7:00:00am a 6:59:59pm, de qué paises la mayoría de los tuits?
+   #+begin_src js
 
-
+   #+end_src
 6. De qué país son los tuiteros más famosos de nuestra colección?
+   #+begin_src js
+
+   #+end_src
