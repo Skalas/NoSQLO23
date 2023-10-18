@@ -325,18 +325,26 @@ En este contexto Cassandra nos promete una base de datos "Eventualmente Consiste
 Con esto bajamos cassandra y lo tenemos corriendo en un conenedor de nombre ~cassandra~.
 
 #+begin_src shell
-  ## Ejercicio para el lector, por favor generar el comando para ejecutar cassandra ustedes
-  ##
-#+end_src
+  docker volume rm cassandra-data
+  docker volume create cassandra-data
+  docker stop cassandra
+  docker rm cassandra
+  docker run \
+         -v cassandra-data:/var/lib/cassandra \
+         -p 9042:9042 \
+         --name cassandra \
+         cassandra
+  docker start cassandra
+  #+end_src
 
-#+RESULTS:
-| cassandra-data                                                   |
-| 9d90fee7b7ed51d5c89f6ccf389929a20962146c220bc25ecb0bf092d736cacd |
+  ,#+RESULTS:
+  | cassandra-data                                                   |
+  | 9d90fee7b7ed51d5c89f6ccf389929a20962146c220bc25ecb0bf092d736cacd |
 
-Ahora para correr comandos sobre la bd:
+  Ahora para correr comandos sobre la bd:
 
-#+begin_src shell
-docker exec -it cassandra cqlsh
+  #+begin_src shell
+  docker exec -it cassandra cqlsh
 #+end_src
 
 Esto conecta con la interfaz para hacer queries en la bd ~cqlsh~.
@@ -364,11 +372,7 @@ Por ende, TODOS los servidores son ejecutados por _daemons_.
 
 Una vez arrancado el _daemon_ o el server, podemos crear bases de datos.
 
-Ahora vamos a reconectarnos con la BD ~voc~ con el usuario ~voc~ en lugar del usuario administrador ~monetdb~ y crear unas tablas de muestra:
-
 #+begin_src sh
-  docker exec -it cassandra cqlsh
-  # password: "voc"
   drop table user;
   CREATE TABLE user (
       first_name text ,
@@ -378,16 +382,17 @@ Ahora vamos a reconectarnos con la BD ~voc~ con el usuario ~voc~ en lugar del us
       PRIMARY KEY (last_name, first_name))
   ;
   INSERT INTO user (first_name, last_name, title, email)
-  VALUES ( 'Miguel','Escalante', 'Mr.','juan@example.com')
+  VALUES ( 'Miguel','Escalante', 'Mr.','miguel@example.com')
   ;
 #+end_src
 
 Para ilustrar un par de principios base ahora vamos a hacer un query muy sencillo:
 #+begin_src sql
-  SELECT *
-    FROM user
-   WHERE first_name='Miguel' AND
-  last_name='Escalante';
+    SELECT *
+      FROM user
+     WHERE
+  first_name='Miguel'
+       AND last_name='Escalante';
 #+end_src
 
 Esto implica que pedimos con las dos llaves primarias los renglones que cumplan con las características, pero ¿Qué pasa si ahora sólo pedimos con una de las columnas?

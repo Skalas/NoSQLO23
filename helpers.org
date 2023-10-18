@@ -24,3 +24,36 @@
 #+begin_src shell
   docker exec -it mongo mongosh
 #+end_src
+* Cassandra
+** Daemon de Cassandra
+#+begin_src shell
+  docker volume create cassandra-data
+  docker stop cassandra
+  docker rm cassandra
+  docker run \
+         -v cassandra-data:/var/lib/cassandra  \
+         -p 9042:9042 \
+         --name cassandra \
+         -d cassandra:latest
+#+end_src
+** Shell de Cassandra
+#+begin_src shell
+docker exec -it cassandra cqlsh
+#+end_src
+* Postgres
+** Daemon de postgres
+#+begin_src shell
+  docker volume create postgresql-data
+  docker stop postgres
+  docker rm postgres
+  docker run -p 5432:5432 \
+         -v postgresql-data:/var/lib/postgresql/data \
+         -e POSTGRES_PASSWORD=postgres \
+         --name postgres \
+         -d \
+         postgres
+#+end_src
+** Cliente de postgres
+#+begin_src shell
+docker exec -it postgres psql -Upostgres
+#+end_src
