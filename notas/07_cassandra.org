@@ -1,0 +1,573 @@
+
+* Ejercicio de carga PostgreSQL VS Cassandra
+** Postgres Run
+
+#+begin_src shell
+  docker exec -it postgres psql -d postgres -Upostgres
+ # docker exec -it postgres /bin/bash
+
+#+end_src
+
+Vamos a poner a Cassandra a jugar carreras VS PostgreSQL para inserción de datos.
+
+Tengo una BD de viajes de Ecobici de 2010 a 2017. *⚠️ Son más de 45 millones de registros, osea alrededor de 18GB ⚠️*, entonces para efectos didácticos no conviene que manejen ni intenten cargar esta base completa, por lo que les voy a compartir [[https://drive.google.com/file/d/1FzY0I4NdcxOf9zzSa2k5BktZkr9wKWgu/view?usp=sharing][un subset de 10M de registros]].
+
+
+Primero debemos crear tanto en Cassandra como en PostgreSQL la siguiente tabla:
+
+Primero en PostgreSQL:
+#+begin_src sql
+  create schema ecobici;
+  set search_path to ecobici;
+  create table ecobici_historico (
+    genero_usuario  VARCHAR(80),
+    edad_usuario  VARCHAR(80),
+    bici  VARCHAR(80),
+    fecha_retiro  VARCHAR(80),
+    hora_retiro_copy  VARCHAR(80),
+    fecha_retiro_completa  VARCHAR(80),
+    anio_retiro  VARCHAR(80),
+    mes_retiro  VARCHAR(80),
+    dia_semana_retiro  VARCHAR(80),
+    hora_retiro  VARCHAR(80),
+    minuto_retiro  VARCHAR(80),
+    segundo_retiro  VARCHAR(80),
+    ciclo_estacion_retiro  VARCHAR(80),
+    nombre_estacion_retiro  VARCHAR(80),
+    direccion_estacion_retiro  VARCHAR(80),
+    cp_retiro  VARCHAR(80),
+    colonia_retiro  VARCHAR(80),
+    codigo_colonia_retiro  VARCHAR(80),
+    delegacion_retiro  VARCHAR(80),
+    delegacion_retiro_num  VARCHAR(80),
+    fecha_arribo  VARCHAR(80),
+    hora_arribo_copy  VARCHAR(80),
+    fecha_arribo_completa  VARCHAR(80),
+    anio_arribo  VARCHAR(80),
+    mes_arribo  VARCHAR(80),
+    dia_semana_arribo  VARCHAR(80),
+    hora_arribo  VARCHAR(80),
+    minuto_arribo  VARCHAR(80),
+    segundo_arribo  VARCHAR(80),
+    ciclo_estacion_arribo  VARCHAR(80),
+    nombre_estacion_arribo  VARCHAR(80),
+    direccion_estacion_arribo  VARCHAR(80),
+    cp_arribo  VARCHAR(80),
+    colonia_arribo  VARCHAR(80),
+    codigo_colonia_arribo  VARCHAR(80),
+    delegacion_arribo  VARCHAR(80),
+    delegacion_arribo_num  VARCHAR(80),
+    duracion_viaje  VARCHAR(80),
+    duracion_viaje_horas  VARCHAR(80),
+    duracion_viaje_minutos  VARCHAR(80)
+  );
+#+end_src
+
+Luego en Cassandra:
+
+En la consola:
+#+begin_src sh
+  docker exec -it cassandra cqlsh
+#+end_src
+
+Luego dentro del cliente de Cassandra ~mclient~ creamos el usuario y el esquema ~ecobici~:
+
+#+begin_src sql
+  CREATE keyspace ecobici
+    with  replication = {'class': 'SimpleStrategy',
+                             'replication_factor': '1'};
+#+end_src
+
+Y finalmente entramos con el usuario ~ecobici~ que acabamos de crear y creamos la tabla ~ecobici_historico~:
+
+#+begin_src sh
+  use ecobici;
+#+end_src
+
+Ya dentro de ~ecobici~, ejecutamos:
+
+#+begin_src sql
+  create table ecobici.ecobici_historico (
+    genero_usuario  VARCHAR,
+    edad_usuario  VARCHAR,
+    bici  VARCHAR,
+    fecha_retiro  timestamp,
+    hora_retiro_copy  VARCHAR,
+    fecha_retiro_completa  timestamp,
+    anio_retiro  VARCHAR,
+    mes_retiro  VARCHAR,
+    dia_semana_retiro  VARCHAR,
+    hora_retiro  VARCHAR,
+    minuto_retiro  VARCHAR,
+    segundo_retiro  VARCHAR,
+    ciclo_estacion_retiro  VARCHAR,
+    nombre_estacion_retiro  VARCHAR,
+    direccion_estacion_retiro  VARCHAR,
+    cp_retiro  VARCHAR,
+    colonia_retiro  VARCHAR,
+    codigo_colonia_retiro  VARCHAR,
+    delegacion_retiro  VARCHAR,
+    delegacion_retiro_num  VARCHAR,
+    fecha_arribo  timestamp,
+    hora_arribo_copy  VARCHAR,
+    fecha_arribo_completa  timestamp,
+    anio_arribo  VARCHAR,
+    mes_arribo  VARCHAR,
+    dia_semana_arribo  VARCHAR,
+    hora_arribo  VARCHAR,
+    minuto_arribo  VARCHAR,
+    segundo_arribo  VARCHAR,
+    ciclo_estacion_arribo  VARCHAR,
+    nombre_estacion_arribo  VARCHAR,
+    direccion_estacion_arribo  VARCHAR,
+    cp_arribo  VARCHAR,
+    colonia_arribo  VARCHAR,
+    codigo_colonia_arribo  VARCHAR,
+    delegacion_arribo  VARCHAR,
+    delegacion_arribo_num  VARCHAR,
+    duracion_viaje  VARCHAR,
+    duracion_viaje_horas  VARCHAR,
+    duracion_viaje_minutos  VARCHAR,
+    primary key ( colonia_retiro , colonia_arribo)
+  );
+#+end_src
+
+Podemos cargar los csv's desde DBeaver... sin embargo:
+**⚠️ ESTA NO ES LA SOLUCIÓN MÁS ÓPTIMA!**
+
+La herramienta que nos da DBeaver *NO ES* la forma más óptima de hacer cargas masivas a BDs, ni columnares ni relacionales.
+
+La forma más óptima es el comando ~COPY~.
+
+El ~COPY~ realiza bastantes optimizaciones tanto del lado de la BD como del sistema operativo para poder realizar estas cargas.
+
+Lamentablemente, son herramientas SÚPER PICKY!
+
+** Postgres
+
+1. El ~COPY~ puede ser invocado desde una herramienta SQL como una ventana de DBeaver, o desde la línea de comandos.
+2. Cuando se invoca desde la línea de comandos, se hace en conjunto con el comando ~psql~, que es el command-line de PostgreSQL, y entonces el ~copy~ se vuelve el _metacomando_ ~\copy~.
+3. La sintaxis general para este caso de ecobici es ~copy ecobici_historico from '/ruta/al/archivo/ecobici_2010_2017-final.csv' with csv header~. Si esto lo corremos desde ~psql~, entonces debemos de anteponer el ~\~ al ~copy~
+   - la parte de ~with csv header~ le dice al copy que la entrada es un archivo CSV y que además la 1a línea tiene los nombres de las columnas.
+4. Lo invoquemos por donde lo invoquemos, el PostgreSQL hace uso de una función *VIEJÍSIMA* del sistema operativo llamada ~fstat()~ que sirve para saber si un argumento es archivo o es directorio.
+   - Esta función existe desde los sistemas operativos antecesores del Windows y nunca se ha actualizado porque ya todos los lenguajes de programación tienen sus propias funciones para obtener esta respuesta.
+5. Esta función, vieja como es, no admite como argumento archvivos gigantes de más de 4GB.
+
+
+#+begin_src shell
+  cat ecobici_2010_2017.csv |\
+      docker exec -i \
+             postgres psql -U postgres \
+             -c "copy ecobici.ecobici_historico from  stdin DELIMITER ',' CSV HEADER"
+#+end_src
+
+
+** Cassandra
+
+1. La sintaxis del ~copy~ en Cassandra es similar.
+   - Se mantiene el comando ~copy~.
+   - Se mantiene la estructura ~keyspace.table~.
+   - Una diferencia fundamental es que aquí hay que especificar el orden en el que viene el csv para poder integrarlo dentro de cassandra, en caso que no se haga esto, el orden se hace muy complicado.
+   - Se tiene que avisar que se está haciendo una carga desde ~STDIN~.
+   - Se especifica el delimitador con ~DELIMITER=','~.
+   - Se agrega que estamos usando el header con ~HEADER=TRUE~
+2. Si llegaramos a tener algún tipo de problema con el archivo de texto que estamos cargando y todo esto, podríamos encontrarnos con un gran issue: este archivo es muy grande! Lo mejor para poder procesar este tipo de archivos es directamente usar ~sed~ y ~awk~
+
+#+begin_src shell
+  cat ecobici_2010_2017.csv |\
+      docker exec -i \
+             cassandra \
+             cqlsh -k ecobici \
+             -e "copy ecobici.ecobici_historico (genero_usuario,edad_usuario,bici,fecha_retiro,hora_retiro_copy,fecha_retiro_completa,anio_retiro,mes_retiro,dia_semana_retiro,hora_retiro,minuto_retiro,segundo_retiro,ciclo_estacion_retiro,nombre_estacion_retiro,direccion_estacion_retiro,cp_retiro,colonia_retiro,codigo_colonia_retiro,delegacion_retiro,delegacion_retiro_num,fecha_arribo,hora_arribo_copy,fecha_arribo_completa,anio_arribo,mes_arribo,dia_semana_arribo,hora_arribo,minuto_arribo,segundo_arribo,ciclo_estacion_arribo,nombre_estacion_arribo,direccion_estacion_arribo,cp_arribo,colonia_arribo,codigo_colonia_arribo,delegacion_arribo,delegacion_arribo_num,duracion_viaje,duracion_viaje_horas,duracion_viaje_minutos)
+                      from stdin WITH DELIMITER=',' AND HEADER=TRUE"
+
+#+end_src
+
+
+** Las carreritas
+
+Vamos a ejecutar un query analítico que obtenga el promedio de duración de viajes entre todos los pares de colonias.
+
+*En PostgreSQL 🐘*
+
+#+begin_src sql
+  explain analyze
+    select eh.colonia_retiro , eh.colonia_arribo, avg(eh.fecha_arribo_completa::timestamp - eh.fecha_retiro_completa::timestamp)::interval
+    from ecobici.ecobici_historico eh
+    group by eh.colonia_retiro , eh.colonia_arribo;
+#+end_src
+
+Decidí interrumpirlo para intentar reducirlo en carga agregándole un ~WHERE~:
+
+#+begin_src sql
+  explain analyze select avg(eh.fecha_arribo_completa::timestamp - eh.fecha_retiro_completa::timestamp)::interval
+    from ecobici.ecobici_historico eh
+    where eh.colonia_retiro = 'Cuauhtemoc'
+    group by eh.colonia_retiro , eh.colonia_arribo;
+#+end_src
+
+
+Vamos a ver si le ganamos tantito con un índice sobre ~colonia_retiro~ dado que tenemos una condición ~where~:
+
+#+begin_src sql
+  create index big_data_ecobici_colonias on ecobici.ecobici_historico (
+    colonia_retiro, colonia_arribo
+  );
+#+end_src
+
+*En Cassandra 🖼️*
+
+El query en Cassandra tiene algunos cambios en sintaxis y no estamos agregando cláusula ~WHERE~ porque precisamente deseamos "presumir" las capacidades de las BDs columnares:
+#+begin_src sql
+  select colonia_retiro , colonia_arribo , avg ( blobAsBigint(timestampAsBlob(fecha_arribo_completa)) - blobAsBigint(timestampAsBlob(fecha_retiro_completa)))/60000.0 as promedio_diferencia
+    from ecobici.ecobici_historico
+   group by colonia_retiro , colonia_arribo;
+#+end_src
+
+* Cómo usamos Cassandra como Data Warehouse?
+
+El uso principal de las BDs columnares es como Data Warehouse.
+
+El Data Warehousing es precisamente jalar de una relacional/transaccional y guardar en una columnar/analítica para formar histórico profundo.
+
+Las características principales del Data Warehousing moderno son:
+1. Los datos a cargar están en forma de Big Table
+2. La llave primaria de dicha Big Table es una columna que describe el paso del tiempo (aún cuando no tengamos datos en cierto timeslot)
+
+Allá afuera se van a encontrar aún con gente que usa esquemas de _snowflake_ o _star_ para modelar data warehouses.
+
+Ambos esquemas usan un diseño donde al centro está una tabla de _facts_ junto con las fechas, y decenas de llaves foráneas, y alrededor, exportándoles su llave, decenas de tablas llamadas _dimensiones_, que son básicamente los objetos de negocio.
+
+
+#+DOWNLOADED: screenshot @ 2022-10-20 14:39:09
+[[file:images/20221020-143909_screenshot.png]]
+
+👀OJO👀 Fíjense como este esquema se parece un buen a los esquemas relacionales que usualmente tenemos en las BDs relacionales/transaccionales.
+
+Las _"dimensiones"_ son los *objetos de negocio*.
+
+Los _"facts"_ son los *eventos de negocio* que combinan uno o más objetos de negocio para describirse.
+
+Y como tal, los _"facts"_ tienen como llave la _"dimensión"_ 🕰️*TIEMPO*🕰️.
+
+Estos esquemas de _dimensional modeling_ fueron creados por [[https://en.wikipedia.org/wiki/Dimensional_modeling][Ralph Kimball en el 96]], PERO en ese momento la realidad era muy, muy diferente.
+
+Algunos supuestos de esos años, que ya no son vigentes, son:
+
+1. Databases are slow and expensive
+2. SQL language is limited
+3. You can never join fact tables because of one to many or many to one joins
+4. Businesses are slow to change
+
+Entonces, dado que:
+
+1. Las bases de datos ya son rápidas y el storage baratísimo
+2. Y que el SQL ha evolucionado a un lenguaje rico en features y expresiones que, aunque no forman parte del estándar, nos simplifican la vida
+3. Y que estas restricciones quedan acotadas en las bases de datos relacionales y que ya tenemos otras tantas formas de organizar data
+4. Y que el mundo startupero ha redefinido la velocidad con la que se operan los negocios
+
+Entonces podemos decir que el trabajo de Kimball es ya poco relevante.
+
+Aunque cientos de ingenieros viejitos en el sector público (y uno que otro del sector privado) les digan que no.
+
+Lo único rescatable que podemos sacar del trabajo de Kimball es el manejo de la *dimensión tiempo*, que podemos combinar con esquemas modernos de _Big Table_ o _One Big Table_.
+
+Vamos a utilizar la BD de Northwind para emular la creación de un DWH con la dimensión tiempo:
+
+** 1. Definir granularidad
+
+Vamos a explorar las tablas centrales de la BD de Northwind para tratar de obtener la *frecuencia mínima* con la que se crean nuevos registros en ellas.
+
+- Las tablas centrales para el negocio de Northwind, *y que además tienen algún campo tipo ~date~* son:
+  - ~orders~
+  - ~employees~
+
+- En la tabla ~orders~ tenemos que hay un nuevo registro cada *.8 días*
+#+begin_src sql
+  select avg(t.timediff) from
+                         (SELECT orderdate - lag(orderdate) OVER (ORDER BY orderdate) as timediff
+                            FROM orders o
+                           ORDER BY orderdate) as t;
+#+end_src
+- En la tabla ~employees~ tenemos que hay un nuevo hire cada *150 días*
+#+begin_src sql
+  -- select avg(abs(timediff)) from
+  --                             (SELECT hire_date - lag(hire_date) OVER (ORDER BY e.employee_id) as timediff
+  --                                FROM employees e
+  --                               ORDER BY e.employee_id) as t;
+#+end_src
+
+Con esto podemos decir que la mínima frecuencia de inserción es de 1 día.
+
+Por tanto, la dimensión _time_ de nuestra BD histórica será *diaria*:
+
+** 2. Crear tabla con _dimensión tiempo_
+
+Del lado de la BD fuente vamos a crear la tabla que representará nuestra dimensión de tiempo.
+
+Vamos a ir a la fecha mínima y máxima de las 2 tablas de arriba:
+
+- En ~orders~ la mínima de ~order_date~ es *1996-07-04* y el máximo es *1998-05-06*
+- En ~employees~ el mínimo de ~hire_date~ es *1992-04-01* y el máximo es *1994-11-15*
+
+Por tanto, nuestra tabla con la dimensión de tiempo va a ir *diario* desde *1992-04-01* hasta  *1998-05-06*.
+
+Esta tabla la vamos a crear del lado de PostgreSQL:
+
+#+begin_src sql
+  create table time_dimension (
+    date_axis date primary key,
+    seq_num serial unique not null
+  );
+
+  insert into time_dimension(date_axis) -- recordemos que para insertar desde un select, omitimos el keyword values
+  select t.day::date
+    from generate_series(timestamp '1992-04-01',
+                         timestamp '1998-05-06',
+                         interval '1 day') as t(day);
+#+end_src
+
+** 3. Extraer y hacer ~join~ con dimensión de tiempo
+
+Ya con la tabla que nos da el eje de tiempo, podemos hacer las extracciones de toda la BD y hacer un ~left join~ con la tabla de tiempo para indicar cuando no hay evento en esa fecha para X o Y objeto de negocio:
+
+#+begin_src sql
+  select *
+    from time_dimension td
+         left outer join orders o on (td.date_axis = o.orderdate)
+--         left outer join employees e on (td.date_axis = e.birthdate)
+         left outer join order_details od using (order_id)
+         left outer join products p using (product_id)
+         left outer join categories cat using (category_id)
+         left outer join suppliers s using (supplier_id)
+         left outer join shippers sh on (o.ship_via = sh.shipper_id)
+         left outer join customers cus using (customer_id)
+   order by td.date_axis;
+#+end_src
+
+Algunas notas:
+
+1. Por legibilidad, primero hacer el ~join~ entre la tabla de dimensión de tiempo y las tablas a las que vamos a sujetar a este eje común.
+2. Usar ~left outer join~ para permitir nulos, y con esto, saber cuando en una fecha no tenemos ni _facts_ o *eventos* de ~employees~ u ~orders~.
+3. Siempre ordenar (de forma ~asc~ o ~desc~) el query.
+
+Pareciera que podemos insertar ya esta tabla de PostgreSQL a Cassandra, pero forzar un mismo eje o dimensión de tiempo en esta _big table_ nos pone demasiados nulos, que además están localizados en un período en específico, y donde además hay poco empalme entre ambos períodos.
+
+Cuando los resultados son así de confusos, es recomendable entonces crear 2 tablas de _facts_ en nuestro DWH. En este caso, vamos a crear una tabla de _facts_ para ~orders~ y otra tabla de _facts_ para ~employees~:
+
+#+begin_src sql
+  select *
+    from time_dimension td
+         left outer join orders o on (td.date_axis = o.order_date)
+         left outer join order_details od using (order_id)
+         left outer join products p using (product_id)
+         left outer join categories cat using (category_id)
+         left outer join suppliers s using (supplier_id)
+         left outer join shippers sh on (o.ship_via = sh.shipper_id)
+         left outer join customers cus using (customer_id)
+         left outer join employees e using (employee_id)
+         left outer join employee_territories et using (employee_id)
+         left outer join territories t using (territory_id)
+   order by td.date_axis;
+
+  select *
+    from time_dimension td
+         left outer join employees e on (td.date_axis = e.hire_date)
+         left outer join employee_territories et using (employee_id)
+         left outer join territories t using (territory_id)
+   order by td.date_axis;
+#+end_src
+
+👀OJO👀 en ambas tablas de _facts_ tenemos info repetida sobre los empleados. Esto es perfectamente normal en el diseño de _Big Table_, dado que las 2 tablas sirven propósitos analíticos diferentes: mientras que los ~employees~ dentro de la 1a tabla son *dependientes* de ~order~, en la otra tabla de _facts_ los ~employees~ son la entidad central y solo los tenemos a ellos.
+
+** 4. Copiar dichas tablas a Cassandra
+
+Primero debemos crear las tablas para luego escribir estos datos.
+
+Para esto vamos a usar una versión del comando ~create table~ que toma como entrada un ~as select...~.
+
+#+begin_src sql
+  create table fact_orders as
+    select
+      territory_id,
+      employee_id,
+      customer_id,
+      supplier_id,
+      category_id,
+      product_id,
+      order_id,
+      date_axis,
+      seq_num,
+      order_date,
+      required_date,
+      shipped_date,
+      ship_via,
+      freight,
+      ship_name,
+      ship_address,
+      ship_city,
+      ship_region,
+      ship_postal_code,
+      ship_country,
+      p.unit_price as unit_price_in_product,
+      quantity,
+      discount,
+      product_name,
+      quantity_per_unit,
+      od.unit_price as unit_price_in_order,
+      units_in_stock,
+      units_on_order,
+      reorder_level,
+      discontinued,
+      category_name,
+      description,
+      picture,
+      s.company_name as supplier_company_name,
+      s.contact_name,
+      s.contact_title,
+      s.address as supplier_address,
+      s.city as supplier_city,
+      s.region as supplier_region,
+      s.postal_code,
+      s.country as supplier_country,
+      s.phone as supplier_phone,
+      s.fax as supplier_fax,
+      s.homepage,
+      shipper_id,
+      sh.company_name as shipper_company_name,
+      sh.phone,
+      cus.company_name,
+      cus.contact_name as customer_company_name,
+      cus.contact_title as customer_contact_title,
+      cus.address as customer_address,
+      cus.city as customer_city,
+      cus.region as customer_region,
+      cus.postal_code as customer_postal_code,
+      cus.country as customer_country,
+      cus.phone as customer_phone,
+      cus.fax as customer_fax,
+      e.last_name,
+      e.first_name,
+      e.title,
+      e.title_of_courtesy,
+      e.birth_date,
+      e.hire_date,
+      e.address as employee_address,
+      e.city as employee_city,
+      e.region as employee_region,
+      e.postal_code as employee_postal_code,
+      e.country as employee_country,
+      e.home_phone,
+      e.extension,
+      e.photo,
+      e.notes,
+      e.reports_to,
+      e.photo_path,
+      t.territory_description,
+      t.region_id
+      from time_dimension td
+           left outer join orders o on (td.date_axis = o.order_date)
+           left outer join order_details od using (order_id)
+           left outer join products p using (product_id)
+           left outer join categories cat using (category_id)
+           left outer join suppliers s using (supplier_id)
+           left outer join shippers sh on (o.ship_via = sh.shipper_id)
+           left outer join customers cus using (customer_id)
+           left outer join employees e using (employee_id)
+           left outer join employee_territories et using (employee_id)
+           left outer join territories t using (territory_id)
+     order by td.date_axis;
+#+end_src
+
+👀OJO👀 que, atendiendo al dicho "el flojo y el mezquino andan 2 veces el camino", tuve que quitar el ~*~ y hacer la talacha de desambiguar las columnas que se llamaban igual, pero estaban en diferentes tablas, usando alias.
+
+Esto nos crea la tabla ~facts_orders~ en PostgreSQL que luego podemos mover a Cassandra.
+
+Noten que la tabla no tiene primary key, y esto está correcto. Ya cuando vamos a mover a Cassandra, podemos generar otra llave, o usar el campo ~seq_num~ que viene desde la tabla de dimensión de tiempo.
+#+begin_src sql
+  CREATE keyspace northwind
+    with  replication = {'class': 'SimpleStrategy',
+                             'replication_factor': '1'};
+#+end_src
+
+#+begin_src sql
+  CREATE TABLE northwind.fact_orders (
+    territory_id varchar ,
+    employee_id int,
+    customer_id varchar,
+    supplier_id int,
+    category_id int,
+    product_id int,
+    order_id int,
+    date_axis date,
+    seq_num int,
+    order_date date,
+    required_date date,
+    shipped_date date,
+    ship_via int,
+    freight float,
+    ship_name varchar,
+    ship_address varchar,
+    ship_city varchar,
+    ship_region varchar,
+    ship_postal_code varchar,
+    ship_country varchar,
+    unit_price_in_product float,
+    quantity int,
+    discount float,
+    product_name varchar,
+    quantity_per_unit varchar,
+    unit_price_in_order float,
+    units_in_stock int,
+    units_on_order int,
+    reorder_level int,
+    discontinued int,
+    category_name varchar,
+    description text,
+    picture blob,
+    supplier_company_name varchar,
+    contact_name varchar,
+    contact_title varchar,
+    supplier_address varchar,
+    supplier_city varchar,
+    supplier_region varchar,
+    postal_code varchar,
+    supplier_country varchar,
+    supplier_phone varchar,
+    supplier_fax varchar,
+    homepage text,
+    shipper_id int,
+    shipper_company_name varchar,
+    phone varchar,
+    company_name varchar,
+    customer_company_name varchar,
+    customer_contact_title varchar,
+    customer_address varchar,
+    customer_city varchar,
+    customer_region varchar,
+    customer_postal_code varchar,
+    customer_country varchar,
+    customer_phone varchar,
+    customer_fax varchar,
+    last_name varchar,
+    first_name varchar,
+    title varchar,
+    title_of_courtesy varchar,
+    birth_date date,
+    hire_date date,
+    employee_address varchar,
+    employee_city varchar,
+    employee_region varchar,
+    employee_postal_code varchar,
+    employee_country varchar,
+    home_phone varchar,
+    "extension" varchar,
+    photo blob,
+    notes text,
+    reports_to int,
+    photo_path varchar,
+    territory_description varchar,
+    region_id int,
+    primary key (territory_id, employee_id,customer_id,supplier_id)
+  );
+#+end_src

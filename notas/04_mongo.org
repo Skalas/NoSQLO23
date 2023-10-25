@@ -488,9 +488,12 @@ Cómo podemos agregar un atributo a cada restaurante para tener su score total a
       {$project:{"grades.score":1, "name":1}},
       {$unwind:"$grades"},
       {$group:{_id:"$name", "gradeArray":{$push:"$grades.score"}}},
-      {$project:{"name":"$_id",_id:0,"gradeArray":1}},  {$addFields:{"totalScore":{$sum:"$gradeArray"},"avgScore":{$avg:"$gradeArray"}}}
+      {$project:{"name":"$_id",_id:0, "gradeArray":1}},
+      {$addFields:{"totalScore":{$sum:"$gradeArray"},"avgScore":{$avg:"$gradeArray"}}}
   ])
 #+end_src
+
+#+RESULTS:
 
 Desmenucemos este query para entenderlo:
 
@@ -533,21 +536,6 @@ Si ejecutamos la siguiente agregación:
       { $unwind: "$tags" },
       { $sortByCount: "$tags" }
   ] )
-#+end_src
-
-Tendremos la salida:
-
-#+begin_src js
-  { "_id" : "painting", "count" : 6 }
-  { "_id" : "oil", "count" : 4 }
-  { "_id" : "Expressionism", "count" : 3 }
-  { "_id" : "Surrealism", "count" : 2 }
-  { "_id" : "abstract", "count" : 2 }
-  { "_id" : "woodblock", "count" : 1 }
-  { "_id" : "woodcut", "count" : 1 }
-  { "_id" : "ukiyo-e", "count" : 1 }
-  { "_id" : "satire", "count" : 1 }
-  { "_id" : "caricature", "count" : 1 }
 #+end_src
 
 Esto es, cuenta los elementos comunes y los ordena por el num de ocurrencias.
@@ -595,36 +583,6 @@ Y luego corremos el operador ~$lookup~ como parte de un pipeline de la función 
           }
       }
   ])
-#+end_src
-
-El resultado es:
-
-#+begin_src js
-  {
-      "_id" : 1,
-      "item" : "almonds",
-      "price" : 12,
-      "quantity" : 2,
-      "inventory_docs" : [
-          { "_id" : 1, "sku" : "almonds", "description" : "product 1", "instock" : 120 }
-      ]
-  }
-  {
-      "_id" : 2,
-      "item" : "pecans",
-      "price" : 20,
-      "quantity" : 1,
-      "inventory_docs" : [
-          { "_id" : 4, "sku" : "pecans", "description" : "product 4", "instock" : 70 }
-      ]
-  }
-  {
-      "_id" : 3,
-      "inventory_docs" : [
-          { "_id" : 5, "sku" : null, "description" : "Incomplete" },
-          { "_id" : 6 }
-      ]
-  }
 #+end_src
 
 Posterior a esto podríamos continuar el pipeline, por ejemplo, para contar los ~inventory_docs~ por diccionario:
@@ -678,38 +636,12 @@ Si la perspectiva está anclada en ~class_id~, entonces deberíamos tener 100,00
 
 #+begin_src js
   db.grades.distinct("class_id")
-
-  [
-      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
-      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
-      36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
-      60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
-      72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
-      84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
-      96, 97, 98, 99,
-      ... 401 more items
-  ]
 #+end_src
 
 De acuerdo a esto, el universo de clases es mucho menor, por lo que probablemente esta colección esté armada desde la perspectiva del estudiante.
 
 #+begin_src js
   db.grades.distinct("student_id")
-
-  [
-      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
-      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
-      36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
-      60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
-      72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
-      84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
-      96, 97, 98, 99,
-      ... 9900 more items
-  ]
 #+end_src
 
 Ahora vamos a tratar de armar el query para dar respuesta a la pregunta inicial:
@@ -729,34 +661,4 @@ Ahora vamos a tratar de armar el query para dar respuesta a la pregunta inicial:
       {$sort:{"_id.clase":1,"_id.eval":1}}
   ])
 
-#+end_src
-
-Nuestro resultado es:
-
-#+begin_src js
-  [
-      { _id: { clase: 0, eval: 'exam' }, promedio: 46.224870203904395 },
-      { _id: { clase: 0, eval: 'homework' }, promedio: 49.6592370300883 },
-      { _id: { clase: 0, eval: 'quiz' }, promedio: 49.38124259163944 },
-      { _id: { clase: 1, eval: 'exam' }, promedio: 50.78357850094616 },
-      { _id: { clase: 1, eval: 'homework' }, promedio: 49.18339520790678 },
-      { _id: { clase: 1, eval: 'quiz' }, promedio: 51.68365158823541 },
-      { _id: { clase: 2, eval: 'exam' }, promedio: 51.212269415215715 },
-      { _id: { clase: 2, eval: 'homework' }, promedio: 48.635517471345494 },
-      { _id: { clase: 2, eval: 'quiz' }, promedio: 49.22183768413837 },
-      { _id: { clase: 3, eval: 'exam' }, promedio: 49.24088016851434 },
-      { _id: { clase: 3, eval: 'homework' }, promedio: 49.32958980280401 },
-      { _id: { clase: 3, eval: 'quiz' }, promedio: 49.70705542324686 },
-      { _id: { clase: 4, eval: 'exam' }, promedio: 48.45214274611575 },
-      { _id: { clase: 4, eval: 'homework' }, promedio: 51.336198599567986 },
-      { _id: { clase: 4, eval: 'quiz' }, promedio: 52.186677392814204 },
-      { _id: { clase: 5, eval: 'exam' }, promedio: 51.91626171544547 },
-      { _id: { clase: 5, eval: 'homework' }, promedio: 49.71133512774075 },
-      { _id: { clase: 5, eval: 'quiz' }, promedio: 48.17571458478485 },
-      { _id: { clase: 6, eval: 'exam' }, promedio: 54.20236080762028 },
-      { _id: { clase: 6, eval: 'homework' }, promedio: 49.441178234623834 },
-      ...,
-      ...,
-      ...,
-  ]
 #+end_src
