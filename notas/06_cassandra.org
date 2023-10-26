@@ -388,11 +388,11 @@ Una vez arrancado el _daemon_ o el server, podemos crear bases de datos.
 
 Para ilustrar un par de principios base ahora vamos a hacer un query muy sencillo:
 #+begin_src sql
-    SELECT *
-      FROM user
-     WHERE
+  SELECT *
+    FROM user
+   WHERE
   first_name='Miguel'
-       AND last_name='Escalante';
+     AND last_name='Escalante';
 #+end_src
 
 Esto implica que pedimos con las dos llaves primarias los renglones que cumplan con las características, pero ¿Qué pasa si ahora sólo pedimos con una de las columnas?
