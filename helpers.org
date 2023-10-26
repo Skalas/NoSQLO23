@@ -24,9 +24,14 @@
 #+begin_src shell
   docker exec -it mongo mongosh
 #+end_src
+** Iniciar el contenedor Mongo
+#+begin_src shell
+  docker start mongo
+#+end_src
 * Cassandra
 ** Daemon de Cassandra
 #+begin_src shell
+
   docker volume create cassandra-data
   docker stop cassandra
   docker rm cassandra
@@ -38,7 +43,11 @@
 #+end_src
 ** Shell de Cassandra
 #+begin_src shell
-docker exec -it cassandra cqlsh
+  docker exec -it cassandra cqlsh
+#+end_src
+** Iniciar el contenedor de cassandra
+#+begin_src shell
+  docker start cassandra
 #+end_src
 * Postgres
 ** Daemon de postgres
@@ -55,5 +64,9 @@ docker exec -it cassandra cqlsh
 #+end_src
 ** Cliente de postgres
 #+begin_src shell
-docker exec -it postgres psql -Upostgres
+  docker exec -it postgres psql -Upostgres
+#+end_src
+** Iniciar el contenedor de postgres
+#+begin_src shell
+  docker start postgres
 #+end_src
