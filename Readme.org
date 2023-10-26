@@ -27,7 +27,7 @@ En una frase, esta materia trata de *consolidación de datos* para contar una hi
 Escribe a ~miguel.escalante@itam.mx~ y por favor que el subject del correo diga ~[NOSQL]~.
 ** Discord
 
-[[https://discord.gg/Erf7yVW5][Pícale acá.]]
+[[https://discord.gg/U25PeD5c][Pícale acá.]]
 
 * Temario
 
@@ -48,7 +48,7 @@ La calificación final está compuesta de la manera siguiente:
 | Primer Parcial           |        30% |
 | Examen Final             |        30% |
 | Proyecto Final (equipos) |        30% |
-| Presentación             |        10% |
+| Presentación (del proyecto)              |        10% |
 
 ** Primer Parcial
 A la mitad del semestre haremos una evaluación con los temas vistos hasta el momento, todo lo visto o mencionado en clase es sujeto a ser evaluado en este examen. Tendrá un componente teórico y un componente práctico, más o menos al 50%.
