@@ -177,7 +177,7 @@ Y reiniciar el server
 
 Ahora si, conectémonos a Neo4j.
 
-Vamos a abrir un browser y entrar a ~https://[IP ADDRESS]:7474~. Nos va a pedir user y password. Los de default son ~neo4j~/~neo4j~, pero en cuanto los usemos, Neo4j nos va a pedir que los cambiemos.
+Vamos a abrir un browser y entrar a ~http://[IP ADDRESS]:7474~. Nos va a pedir user y password. Los de default son ~neo4j~/~neo4j~, pero en cuanto los usemos, Neo4j nos va a pedir que los cambiemos.
 
 Lo que responde en el puerto ~7474~ es solamente un cliente ligero web hacia Neo4j, no el Neo4j como tal.
 
