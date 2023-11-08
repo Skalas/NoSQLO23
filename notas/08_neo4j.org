@@ -144,6 +144,7 @@ Finalmente, podemos instalar Neo4j:
 #+end_src
 
 
+
 Si queremos que cuando reiniciemos la máquina, nuestro neo4j viva, hacemos esto:
 
 #+begin_src shell
@@ -162,10 +163,10 @@ Antes de conectarnos debemos modificar el archivo ~/etc/neo4j/neo4j.conf~ para q
 #+begin_src shell
   sudo nano /etc/neo4j/neo4j.conf
 #+end_src
-Hay que buscar la siguiente línea y descomentarla (quitarle el ~*~):
+Hay que buscar la siguiente línea y descomentarla (quitarle el ~#~):
 
 #+begin_src shell
-*dbms.default_listen_address=0.0.0.0
+#dbms.default_listen_address=0.0.0.0
 #+end_src
 
 Y reiniciar el server
