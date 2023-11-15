@@ -70,3 +70,33 @@
 #+begin_src shell
   docker start postgres
 #+end_src
+
+* Neo4j
+** Motor
+#+begin_src shell
+  docker volume create neo4j-data
+  docker stop neo4j
+  docker rm neo4j
+  docker run \
+	 --publish=7474:7474 --publish=7687:7687 \
+	 --volume=neo4j-data:/data \
+	 -d \
+	 --name neo4j \
+	 neo4j
+#+end_src
+
+** Cliente Cypher
+#+begin_src shell
+docker exec -it neo4j cypher
+#+end_src
+
+
+* Ubuntu
+
+#+begin_src shell
+  docker run \
+	 -v /Users/miguelescalante/test/:/root/ \
+	 --name ubuntu \
+	 -it \
+	 ubuntu:latest
+#+end_src
