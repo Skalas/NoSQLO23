@@ -1,0 +1,23 @@
+#+TITLE: Proyecto Final NoSQLo2023
+#+AUTHOR: Prof. Miguel Angel Escalante Serrato
+#+EMAIL:  miguel.escalante@itam.mx
+#+DATE: 2023-11-09
+#+STARTUP: showall
+
+* Objetivo
+
+Que los alumnos muestren el entendimiento y capacidad de manejo de las diferentes bases de datos que vimos en el semestre, así como los conceptos relacionados con API's, ETL's, etc.
+
+* Planteamiento
+
+Buscar alguna API que llame la atención al equipo, con esta API, conectarla através de python con una base de datos MongoDB. Posteriormente, hacer un ETL que cargue la base de datos procesada  una base de datos estilo grafo; evidentemente las transformaciones y los subconjuntos de datos ocupados serán diferentes para cada base de datos ya que tienen fines diferentes cada una.
+
+* Entregables
+
+El proyecto debe ser lo más reproducible posible, por lo que se debe de entregar un repositorio completo en github, con los scripts de carga y un ~Readme.md~ a manera de instructivo de cómo usar las utilerías implementadas.
+
+Además se requieren al menos 3 queries interesantes con respecto a cada base de datos (9 en total), que expliquen un poco más el fenómeno del cual la base de datos, está representando.
+
+*  Fecha límite
+
+La entrega es el día 29 de Noviembre a las 23:59, posteriormente se harán las presentaciones el día 30 de Noviembre a las 17:00.
