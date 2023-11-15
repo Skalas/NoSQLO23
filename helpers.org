@@ -87,7 +87,7 @@
 
 ** Cliente Cypher
 #+begin_src shell
-docker exec -it neo4j cypher
+docker exec -it neo4j cypher-shell
 #+end_src
 
 
