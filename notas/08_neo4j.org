@@ -104,7 +104,7 @@ Ya se dieron cuenta que todas las BDs alternas a PostgreSQL están orientadas a 
 
 Entonces hace todo el sentido del mundo que tengamos al frente de nuestra administración de datos una BD relacional para capturar TODO LO TRANSACCIONAL, y luego, dependiendo del tipo de analíticos que deseemos hacer, mover estos datos a una BD que propicie dicha actividad.
 
-1. Alimentar dashboards o modelos de ML: MonetDB o BDs columnares
+1. Alimentar dashboards o modelos de ML: Cassandra o BDs columnares
 2. Redes de corrupción/fraude o investigaciones judiciales: Neo4j o BDs de grafos
 3. Visualización de actividad web o de APIs: MongoDB o BDs de documentos
 
