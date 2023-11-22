@@ -140,10 +140,8 @@ sudo apt update
 Finalmente, podemos instalar Neo4j:
 
 #+begin_src shell
-  sudo apt install neo4j
+  sudo apt install -y neo4j
 #+end_src
-
-
 
 Si queremos que cuando reiniciemos la máquina, nuestro neo4j viva, hacemos esto:
 
@@ -267,7 +265,7 @@ Veremos que ahí están nuestros 25 productos:
 
 En esta caja vamos a poder escribir queries en "Cypher". Qué está haciendo este query? ~MATCH (n:Product) RETURN n LIMIT 25~.
 
-1. ~MATCH~ es parecido que el ~FROM~.
+1. ~MATCH~ es parecido al ~FROM~.
 
 2. La expresión ~n:Product~ va a buscar los /nodes/ que tengan el /label/ ~Product~.
 
@@ -398,7 +396,7 @@ Vamos a tener el siguiente grafo:
 Podemos ver que al menos en esta versión de Northwind, tenemos bastantes clientes que nunca nos han pedido, pero *esto no es una comunidad*, porque no hay ninguna conexión entre estos. Tienen cosas en común, pero ninguna relación, por lo que no podemos decir que es una comunidad.
 
 #+begin_src shell
- docker run -it neo4j cypher-shell -a 18.207.120.182 -u neo4j -p neo
+ docker run -it neo4j cypher-shell -a 18.207.120.182 -u neo4j -p neoneoneo
 #+end_src
 ** Ejercicios de SQL pero en Neo4j
 
@@ -430,7 +428,7 @@ order by conteo desc;
 #+begin_src cypher
 match (c:Customer)
 return c.contactTitle as title, count(c.contactTitle) as title_count
-order by title;
+order by title_count desc;
 #+end_src
 
 *** Cuántos productos tenemos de cada categoría?
@@ -471,30 +469,29 @@ order by units_stock;
 La respuesta más correcta en SQL:
 
 #+begin_src sql
-with summary as (
-	select o.order_id as ord_id , o.ship_country as shp_ctry, sum(od.quantity) as sum_qty
-	from orders o join order_details od using (order_id)
-	join products p using (product_id)
-	group by o.order_id , o.ship_country
-)
-select ord_id, shp_ctry , max(sum_qty) as max_qty
-from summary
-group by ord_id, shp_ctry
-order by max_qty desc;
+  with summary as (
+    select o.order_id as ord_id , o.ship_country as shp_ctry, sum(od.quantity) as sum_qty
+      from orders o join order_details od using (order_id)
+           join products p using (product_id)
+     group by o.order_id , o.ship_country
+  )
+  select ord_id, shp_ctry , max(sum_qty) as max_qty
+    from summary
+   group by ord_id, shp_ctry
+   order by max_qty desc;
 #+end_src
 
-Con order.freight (otra respuesta correcta en SQL):
 #+begin_src cypher
-match (o:Order)
-return o.shipCountry as ship_country, max(toFloat(o.freight)) as max_freight
-order by max_freight desc;
+  match (o:Order)
+  return o.shipCountry as ship_country, max(toFloat(o.freight)) as max_freight
+  order by max_freight desc;
 #+end_src
 
 Con order_details.quantity (respuesta incorrecta, pero la ponemos aquí para respetar el replicado en Cypher de respuestas en SQL)
 #+begin_src cypher
-match (o:Order)-[od:ORDERS]->(p:Product)
-return o.shipCountry as ship_ctry, max(od.quantity) as max_qty
-order by max_qty desc;
+  match (o:Order)-[od:ORDERS]->(p:Product)
+  return o.shipCountry as ship_ctry, max(od.quantity) as max_qty
+  order by max_qty desc;
 #+end_src
 
 TBD: Exporar responder esta pregunta con la suma de quantities de todas las ordenes de un país, y luego sacar el max
@@ -507,7 +504,7 @@ call {
 	sum(od.quantity) as sum_qty_per_order
 	order by sum_qty_per_order desc
 }
-return ship_country, max(sum_qty_per_order)
+return ship_country, max(sum_qty_per_order);
 #+end_src
 
 Veamos que el comando `call` se parece algo a los _common table expressions_ de SQL.
@@ -540,7 +537,7 @@ La instalación de APOC es como sigue:
 
 1. Entrar a la máquina virtual de EC2 en donde tenemos el Neo4j con ~ssh -i labsuser.pem ubuntu@[LA IP DE SU MÁQUINA]~
 2. Entrar el comando ~wget https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/4.1.0.0/apoc-4.1.0.0-core.jar~ - esto va a descargar la librería
-3. Debemos copiar esta librería a ~/var/lib/neo4j/plugins/~ con el comando ~cp apoc-4.1.0.0-core.jar /var/lib/neo4j/plugins/~
+3. Debemos copiar esta librería a ~/var/lib/neo4j/plugins/~ con el comando ~sudo cp apoc-4.1.0.0-core.jar /var/lib/neo4j/plugins/~
 4. Ahora debemos reiniciar el Neo4j con el comando ~sudo systemctl restart neo4j.service~
 
 Con eso ya debemos tener acceso a las funciones de APOC.
