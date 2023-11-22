@@ -568,7 +568,7 @@ Es la opinión de este profesor que ser rico no es malo, y que la recaudación m
 
 Pero evadir el fisco si es ilegal, y da pie a otras actividades ilegales como lavado de dinero, lo cual habilita redes criminales como narcotráfico, trata, prostitución, etc.
 
-Encima de esto, estos /offshore leaks/ muestran algo que raya en lo inmoral. En medio de la pandemia de COVID19, cuando millones de personas están atravesando por una crisis económica que está ampliando la brecha entre los menos afortunados, y cuando cientos de gobiernos están experimentando una recuperación anémica, por decir lo menos, *esconder* fortunas para que no sean gravadas, es decir, para no compartir con la población ni contribuir al fisco, es, por definición, xmalvado.
+Encima de esto, estos /offshore leaks/ muestran algo que raya en lo inmoral. En medio de la pandemia de COVID19, cuando millones de personas están atravesando por una crisis económica que está ampliando la brecha entre los menos afortunados, y cuando cientos de gobiernos están experimentando una recuperación anémica, por decir lo menos, *esconder* fortunas para que no sean gravadas, es decir, para no compartir con la población ni contribuir al fisco, es, por definición, malvado.
 
 Neo4j puso a disposición del [[https://www.icij.org/][International Consortium of Investigative Journalists]] no solo licencias empresariales de su BD de Grafos, sino infraestructura, servers, graph visualizers, y todo el resto de sus productos *for free* para que el ICIJ hiciera su chamba.
 
@@ -599,10 +599,10 @@ Entonces vamos a tener que crear OOOOOTRA instancia de EC2 para VOLVER a instala
 
 Es una BD grande, por lo que primero tenemos que hacer unas modificaciones a la config de Neo4j:
 
-1. Cambiar el directorio de default para importar archivotes. Esto lo logramos comentando la línea ~*dbms.directories.import=/var/lib/neo4j/import
+1. Cambiar el directorio de default para importar archivotes. Esto lo logramos comentando la línea ~dbms.directories.import=/var/lib/neo4j/import
 ~ del archivo ~/etc/neo4j/neo4j.conf~. Es un archivo de sistema, por lo que hay que editarlo con ~sudo nano /etc/neo4j/neo4j.conf~.
 
-2. Igual editar el archivo ~/etc/security/limits.conf~ con ~sudo nano 2/etc/security/limits.conf~ y agregar hasta el final los siguientes 2 registros para poder abrir archivos grandes desde el filesystem de Ubuntu:
+2. Igual editar el archivo ~/etc/security/limits.conf~ con ~sudo nano /etc/security/limits.conf~ y agregar hasta el final los siguientes 2 registros para poder abrir archivos grandes desde el filesystem de Ubuntu:
 
 #+begin_src bash
 root   soft    nofile  40000
